@@ -2,12 +2,15 @@ import { useMemo, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { RADII, formatDistance, formatRadius, nearby } from '../geo';
+import { RADII, formatDistance, nearby } from '../geo';
 import { categories, colors, type Category } from '../theme';
 import type { Feed, NearbyItem, Profile } from '../types';
-import { CategoryDot, FLOATING_TAB_SPACE, Glass, T, column, formatDate, useSidePadding, useSideStrip } from '../ui';
+import { CategoryDot, FLOATING_TAB_SPACE, Glass, RadiusControl, T, column, formatDate, useSidePadding, useSideStrip } from '../ui';
 
 type Filter = 'alles' | Category;
+
+// Hoogte van de zwevende glazen filterbalk bovenin.
+const FILTER_BAR_HEIGHT = 52;
 
 export function FeedScreen({
   feed,
@@ -27,67 +30,34 @@ export function FeedScreen({
   onRadiusChange: (radius: number) => void;
 }) {
   const insets = useSafeAreaInsets();
-  const side = useSidePadding();
-  const rail = useSideStrip() > 0; // adres en straal staan dan in de zijrail
+  const strip = useSideStrip(); // > 0: straal en navigatie staan in de glazen zijrail
+  const base = useSidePadding();
+  // Inhoud loopt van rand tot rand; in rustpositie houden we vrij wat onder de zijrail zou vallen.
+  const side = { paddingLeft: base.paddingLeft, paddingRight: strip || base.paddingRight };
   const [filter, setFilter] = useState<Filter>('alles');
   const all = useMemo(() => nearby(feed, profile), [feed, profile]);
   const items = filter === 'alles' ? all : all.filter((i) => i.category === filter);
   const filters: Filter[] = ['alles', ...profile.topics];
+  const barTop = insets.top + 8;
 
-  // Kop scrolt mee met de lijst; alleen een ink-strook achter de statusbalk blijft staan.
+  // Grote titel in iOS-stijl: scrolt mee met de lijst, onder de glazen filterbalk door.
   const header = (
-    <View style={{ marginBottom: 16 }}>
-      <View style={[styles.header, side, { paddingTop: insets.top + 12 }]}>
-        <View style={styles.bounce} />
-        <View style={[column, { gap: 14 }]}>
-          <Pressable accessibilityRole="button" accessibilityHint="Adres of straal wijzigen" onPress={onEditProfile} style={{ gap: 2 }}>
-            <T weight="extrabold" style={{ color: colors.white, fontSize: 20 }}>
-              Mijn Straat
-            </T>
-            {!rail && (
-              <T style={{ color: '#E5EEEE', fontSize: 13 }}>
-                {profile.address}
-              </T>
-            )}
-          </Pressable>
-          {!rail && (
-            <View style={styles.segments} accessibilityRole="radiogroup">
-              {RADII.map((r) => {
-                const on = r === profile.radius;
-                return (
-                  <Pressable key={r} accessibilityRole="radio" accessibilityState={{ selected: on }} onPress={() => onRadiusChange(r)} style={{ flex: 1 }}>
-                    <Glass interactive dark tint={on ? colors.sage : undefined} solid="transparent" style={styles.segment}>
-                      <T weight={on ? 'bold' : 'semibold'} style={{ color: on ? colors.ink : colors.white, fontSize: 13 }} numberOfLines={1}>
-                        {formatRadius(r)}
-                      </T>
-                    </Glass>
-                  </Pressable>
-                );
-              })}
-            </View>
-          )}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingRight: 16 }}>
-            {filters.map((f) => {
-              const on = f === filter;
-              return (
-                <Pressable key={f} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => setFilter(f)}>
-                  <Glass interactive dark tint={on ? colors.sage : undefined} solid="rgba(255,255,255,0.12)" style={styles.chip}>
-                    <T weight="semibold" style={{ color: on ? colors.ink : colors.white, fontSize: 13 }}>
-                      {f === 'alles' ? 'Alles' : categories[f].label}
-                    </T>
-                  </Glass>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-        </View>
+    <View style={[side, { paddingTop: barTop + FILTER_BAR_HEIGHT + 16, paddingBottom: 16 }]}>
+      <View style={[column, { gap: 16 }]}>
+        <Pressable accessibilityRole="button" accessibilityHint="Adres wijzigen" onPress={onEditProfile} style={{ gap: 4 }}>
+          <T weight="extrabold" style={{ color: colors.ink, fontSize: 32, lineHeight: 38 }}>
+            Mijn Straat
+          </T>
+          <T style={{ color: colors.textMuted, fontSize: 15 }}>{profile.address}</T>
+        </Pressable>
+        {/* naast de categorie 'Alles' zou een tweede 'Alles' verwarren; in de smalle zijrail past alleen 'Alles' */}
+        {!strip && <RadiusControl radii={RADII} value={profile.radius} onChange={onRadiusChange} wholeLabel="Gemeente" />}
+        {feed.sample && (
+          <View style={styles.sample}>
+            <T style={{ fontSize: 12, color: '#6B5426' }}>Voorbeelddata. Zet EXPO_PUBLIC_FEED_URL om de echte feed van je Mac te laden.</T>
+          </View>
+        )}
       </View>
-
-      {feed.sample && (
-        <View style={styles.sample}>
-          <T style={{ fontSize: 12, color: '#6B5426' }}>Voorbeelddata. Zet EXPO_PUBLIC_FEED_URL om de echte feed van je Mac te laden.</T>
-        </View>
-      )}
     </View>
   );
 
@@ -97,10 +67,14 @@ export function FeedScreen({
         data={items}
         keyExtractor={(i) => i.id}
         ListHeaderComponent={header}
-        contentContainerStyle={{ paddingBottom: rail ? 24 : insets.bottom + FLOATING_TAB_SPACE }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.white} />}
+        contentContainerStyle={{ paddingBottom: insets.bottom + (strip ? 24 : FLOATING_TAB_SPACE) }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.ink} progressViewOffset={barTop + FILTER_BAR_HEIGHT} />
+        }
         ListEmptyComponent={
-          <T style={{ textAlign: 'center', color: colors.textMuted, marginTop: 40 }}>{profile.radius ? `Geen berichten binnen ${formatDistance(profile.radius)}.` : 'Geen berichten in de gemeente.'}</T>
+          <T style={{ textAlign: 'center', color: colors.textMuted, marginTop: 40 }}>
+            {profile.radius ? `Geen berichten binnen ${formatDistance(profile.radius)}.` : 'Geen berichten in de gemeente.'}
+          </T>
         }
         renderItem={({ item }) => (
           <View style={[side, { marginBottom: 12 }]}>
@@ -127,19 +101,32 @@ export function FeedScreen({
           </View>
         )}
       />
-      <View style={[styles.statusStrip, { height: insets.top }]} />
+
+      {/* Zwevende glazen filterbalk: de kaarten schuiven eronder door. */}
+      <Glass style={[styles.bar, { top: barTop, left: base.paddingLeft - 8, right: (strip || base.paddingRight) - 8 }]}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, padding: 6 }}>
+          {filters.map((f) => {
+            const on = f === filter;
+            return (
+              <Pressable key={f} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => setFilter(f)}>
+                <Glass interactive tint={on ? colors.ink : undefined} solid={on ? colors.ink : 'transparent'} style={styles.chip}>
+                  <T weight="semibold" style={{ color: on ? colors.white : colors.ink, fontSize: 13 }}>
+                    {f === 'alles' ? 'Alles' : categories[f].label}
+                  </T>
+                </Glass>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      </Glass>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  header: { backgroundColor: colors.ink, paddingBottom: 16 },
-  // vult de overscroll boven de kop bij pull-to-refresh, zodat daar geen lichte strook verschijnt
-  bounce: { position: 'absolute', left: 0, right: 0, top: -1000, height: 1000, backgroundColor: colors.ink },
-  statusStrip: { position: 'absolute', top: 0, left: 0, right: 0, backgroundColor: colors.ink },
-  chip: { height: 36, paddingHorizontal: 14, borderRadius: 18, justifyContent: 'center' },
-  segments: { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 20, padding: 3, gap: 3 },
-  segment: { minHeight: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
-  sample: { backgroundColor: '#EFE8D6', paddingHorizontal: 16, paddingVertical: 8 },
-  card: { backgroundColor: colors.white, borderRadius: 16, padding: 14, flexDirection: 'row', gap: 12 },
+  // capsules: balk, chips en segmenten delen dezelfde ronde vorm
+  bar: { position: 'absolute', height: FILTER_BAR_HEIGHT, borderRadius: FILTER_BAR_HEIGHT / 2, overflow: 'hidden' },
+  chip: { height: 40, paddingHorizontal: 16, borderRadius: 20, justifyContent: 'center' },
+  sample: { backgroundColor: '#EFE8D6', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 12 },
+  card: { backgroundColor: colors.white, borderRadius: 16, padding: 16, flexDirection: 'row', gap: 12 },
 });

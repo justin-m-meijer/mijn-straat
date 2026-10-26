@@ -1,5 +1,5 @@
 import { BlurView } from 'expo-blur';
-import { GlassView, isGlassEffectAPIAvailable, isLiquidGlassAvailable } from 'expo-glass-effect';
+import { GlassContainer, GlassView, isGlassEffectAPIAvailable, isLiquidGlassAvailable } from 'expo-glass-effect';
 import { useEffect, useState, type ReactNode } from 'react';
 import {
   AccessibilityInfo,
@@ -104,6 +104,9 @@ export function useSidePadding(base = 16) {
 export const column: ViewStyle = { width: '100%', maxWidth: MAX_CONTENT_WIDTH, alignSelf: 'center' };
 
 const styles = StyleSheet.create({
+  // capsules: container en segmenten even rond, 4pt binnenmarge
+  segments: { borderRadius: 22, padding: 4 },
+  segment: { minHeight: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8 },
   button: { minHeight: 52, borderRadius: 26, paddingHorizontal: 20, alignItems: 'center', justifyContent: 'center' },
   badge: { alignSelf: 'flex-start', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 },
 });
@@ -165,3 +168,56 @@ export function Glass({
 
 // Ruimte onder de lijst voor de zwevende tabbalk op gewone telefoons.
 export const FLOATING_TAB_SPACE = 96;
+
+export const inkMuted = 'rgba(31,78,99,0.55)';
+
+/** Groepeert glazen vormen zodat ze als één familie samensmelten (alleen bij Liquid Glass). */
+export function GlassGroup({ style, spacing = 8, children }: { style?: StyleProp<ViewStyle>; spacing?: number; children?: ReactNode }) {
+  const mode = useGlassMode();
+  if (mode === 'glass') {
+    return (
+      <GlassContainer spacing={spacing} style={style}>
+        {children}
+      </GlassContainer>
+    );
+  }
+  return <View style={style}>{children}</View>;
+}
+
+/** Straalkeuze als één glazen gesegmenteerde control: horizontaal onder de titel, verticaal in de zijrail. */
+export function RadiusControl({
+  radii,
+  value,
+  onChange,
+  vertical = false,
+  wholeLabel = 'Alles',
+}: {
+  radii: number[];
+  value: number;
+  onChange: (radius: number) => void;
+  vertical?: boolean;
+  wholeLabel?: string;
+}) {
+  return (
+    <Glass style={[styles.segments, vertical ? null : { flexDirection: 'row' }]}>
+      <View style={[{ gap: 4 }, vertical ? null : { flexDirection: 'row', flex: 1 }]} accessibilityRole="radiogroup">
+        {radii.map((r) => {
+          const on = r === value;
+          return (
+            <Pressable
+              key={r}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: on }}
+              onPress={() => onChange(r)}
+              style={[styles.segment, vertical ? null : { flex: 1 }, on && { backgroundColor: colors.ink }]}
+            >
+              <T weight={on ? 'bold' : 'semibold'} style={{ color: on ? colors.white : colors.ink, fontSize: 13 }}>
+                {r ? `${r / 1000} km` : wholeLabel}
+              </T>
+            </Pressable>
+          );
+        })}
+      </View>
+    </Glass>
+  );
+}
