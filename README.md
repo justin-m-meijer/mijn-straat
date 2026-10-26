@@ -34,7 +34,9 @@ mijnstraat build --no-llm --limit 20    # snelle rooktest: ophalen + geocoderen
 mijnstraat build                        # volledige run, laatste 90 dagen, met samenvattingen
 ```
 
-Waarom `.venv.nosync`: als `~/Documents` via iCloud synchroniseert, zet macOS de `hidden`-vlag op bestanden in `.venv`. Python 3.12+ slaat verborgen `.pth`-bestanden over, waardoor `mijnstraat` faalt met `ModuleNotFoundError: No module named 'mijnstraat'`. `chflags nohidden` helpt maar even, want de vlag komt terug. iCloud slaat mappen die op `.nosync` eindigen over.
+Zet de repo bij voorkeur in een map buiten iCloud, bijvoorbeeld `~/code/mijn-straat`. In een iCloud-map (`~/Documents`, `~/Desktop`) maakt iCloud bij branchwissels conflictkopieën zoals `FeedScreen 2.tsx`. Daarbuiten is een gewone `.venv` genoeg.
+
+Waarom `.venv.nosync` als de repo toch in iCloud staat: als `~/Documents` via iCloud synchroniseert, zet macOS de `hidden`-vlag op bestanden in `.venv`. Python 3.12+ slaat verborgen `.pth`-bestanden over, waardoor `mijnstraat` faalt met `ModuleNotFoundError: No module named 'mijnstraat'`. `chflags nohidden` helpt maar even, want de vlag komt terug. iCloud slaat mappen die op `.nosync` eindigen over.
 
 Instellingen via omgevingsvariabelen:
 
