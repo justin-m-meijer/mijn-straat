@@ -1,4 +1,5 @@
 import { Pressable, StyleSheet, Text, View, type PressableProps, type TextProps, type ViewStyle } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { categories, colors, fonts, type Category } from './theme';
 
@@ -59,8 +60,25 @@ export function CategoryDot({ category, size = 40 }: { category: Category; size?
 export function formatDate(iso: string): string {
   if (!iso) return '';
   const d = new Date(`${iso}T12:00:00`);
-  return d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' });
+  const thisYear = d.getFullYear() === new Date().getFullYear();
+  return d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', ...(thisYear ? {} : { year: 'numeric' }) });
 }
+
+export function formatDateLong(iso: string): string {
+  if (!iso) return '';
+  return new Date(`${iso}T12:00:00`).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+// Brede schermen (vouwbare telefoons, iPad): inhoud niet breder dan dit, gecentreerd.
+export const MAX_CONTENT_WIDTH = 680;
+
+// Zijmarges die rekening houden met camera-uitsparingen en afgeronde hoeken links/rechts.
+export function useSidePadding(base = 16) {
+  const insets = useSafeAreaInsets();
+  return { paddingLeft: base + insets.left, paddingRight: base + insets.right };
+}
+
+export const column: ViewStyle = { width: '100%', maxWidth: MAX_CONTENT_WIDTH, alignSelf: 'center' };
 
 const styles = StyleSheet.create({
   button: { minHeight: 52, borderRadius: 26, paddingHorizontal: 20, alignItems: 'center', justifyContent: 'center' },

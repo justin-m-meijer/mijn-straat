@@ -5,10 +5,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { formatDistance } from '../geo';
 import { colors } from '../theme';
 import type { NearbyItem, Profile } from '../types';
-import { Button, CategoryBadge, T, formatDate } from '../ui';
+import { Button, CategoryBadge, T, column, formatDateLong, useSidePadding } from '../ui';
 
 export function DetailScreen({ item, profile, onBack }: { item: NearbyItem; profile: Profile; onBack: () => void }) {
   const insets = useSafeAreaInsets();
+  const side = useSidePadding();
   const hasPoint = item.lat != null && item.lon != null;
 
   return (
@@ -31,14 +32,14 @@ export function DetailScreen({ item, profile, onBack }: { item: NearbyItem; prof
           <View style={{ height: insets.top + 56, backgroundColor: colors.ink }} />
         )}
 
-        <View style={{ padding: 16, gap: 14 }}>
+        <View style={[column, side, { paddingVertical: 16, gap: 14 }]}>
           <View style={{ gap: 6 }}>
             <CategoryBadge category={item.category} />
             <T weight="extrabold" style={{ fontSize: 22, lineHeight: 27 }}>
               {item.title}
             </T>
             <T style={{ fontSize: 13, color: colors.textMuted }}>
-              {[item.address, item.distance != null ? formatDistance(item.distance) : null, `${item.doc_type} · ${formatDate(item.published)}`]
+              {[item.address, item.distance != null ? formatDistance(item.distance) : null, `${item.doc_type} · ${formatDateLong(item.published)}`]
                 .filter(Boolean)
                 .join(' · ')}
             </T>
@@ -66,15 +67,15 @@ export function DetailScreen({ item, profile, onBack }: { item: NearbyItem; prof
         accessibilityRole="button"
         accessibilityLabel="Terug"
         onPress={onBack}
-        style={[styles.back, { top: insets.top + 8 }]}
+        style={[styles.back, { top: insets.top + 8, left: 12 + insets.left }]}
       >
         <T weight="extrabold" style={{ fontSize: 20, color: colors.text }}>
           ‹
         </T>
       </Pressable>
 
-      <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>
-        <Button label="Lees en reageer" onPress={() => Linking.openURL(item.url)} style={{ flex: 1 }} />
+      <View style={[styles.footer, { paddingBottom: insets.bottom + 12, paddingLeft: 12 + insets.left, paddingRight: 12 + insets.right }]}>
+        <Button label="Lees en reageer" onPress={() => Linking.openURL(item.url)} style={{ flex: 1, maxWidth: 680, marginHorizontal: 'auto' }} />
       </View>
     </View>
   );

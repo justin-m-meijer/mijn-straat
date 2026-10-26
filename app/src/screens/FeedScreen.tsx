@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { formatDistance, nearby } from '../geo';
 import { categories, colors, type Category } from '../theme';
 import type { Feed, NearbyItem, Profile } from '../types';
-import { CategoryDot, T, formatDate } from '../ui';
+import { CategoryDot, T, column, formatDate, useSidePadding } from '../ui';
 
 type Filter = 'alles' | Category;
 
@@ -25,6 +25,7 @@ export function FeedScreen({
   onEditProfile: () => void;
 }) {
   const insets = useSafeAreaInsets();
+  const side = useSidePadding();
   const [filter, setFilter] = useState<Filter>('alles');
   const all = useMemo(() => nearby(feed, profile), [feed, profile]);
   const items = filter === 'alles' ? all : all.filter((i) => i.category === filter);
@@ -32,7 +33,8 @@ export function FeedScreen({
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.ivory }}>
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+      <View style={[styles.header, side, { paddingTop: insets.top + 12 }]}>
+        <View style={[column, { gap: 14 }]}>
         <Pressable accessibilityRole="button" accessibilityHint="Adres of straal wijzigen" onPress={onEditProfile} style={{ gap: 2 }}>
           <T weight="extrabold" style={{ color: colors.white, fontSize: 20 }}>
             Mijn Straat
@@ -59,6 +61,7 @@ export function FeedScreen({
             );
           })}
         </ScrollView>
+        </View>
       </View>
 
       {feed.sample && (
@@ -70,7 +73,7 @@ export function FeedScreen({
       <FlatList
         data={items}
         keyExtractor={(i) => i.id}
-        contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 24 }}
+        contentContainerStyle={[column, side, { paddingTop: 16, gap: 12, paddingBottom: 24 }]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.ink} />}
         ListEmptyComponent={
           <T style={{ textAlign: 'center', color: colors.textMuted, marginTop: 40 }}>Geen berichten binnen {formatDistance(profile.radius)}.</T>
@@ -80,11 +83,11 @@ export function FeedScreen({
             <CategoryDot category={item.category} />
             <View style={{ flex: 1, gap: 4 }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8 }}>
-                <T weight="bold" style={{ fontSize: 12, color: '#374151' }}>
+                <T weight="bold" style={{ fontSize: 12, color: '#374151', flexShrink: 1 }} numberOfLines={1}>
                   {categories[item.category].label}
                   {item.distance != null ? ` · ${formatDistance(item.distance)}` : ' · hele gemeente'}
                 </T>
-                <T style={{ fontSize: 12, color: colors.textMuted }}>{formatDate(item.published)}</T>
+                <T style={{ fontSize: 12, color: colors.textMuted, flexShrink: 0 }}>{formatDate(item.published)}</T>
               </View>
               <T weight="bold" style={{ fontSize: 15, lineHeight: 20 }} numberOfLines={3}>
                 {item.title}
@@ -103,7 +106,7 @@ export function FeedScreen({
 }
 
 const styles = StyleSheet.create({
-  header: { backgroundColor: colors.ink, paddingHorizontal: 16, paddingBottom: 16, gap: 14 },
+  header: { backgroundColor: colors.ink, paddingBottom: 16 },
   chip: { height: 36, paddingHorizontal: 14, borderRadius: 18, borderWidth: 1, borderColor: 'rgba(255,255,255,0.4)', justifyContent: 'center' },
   sample: { backgroundColor: '#EFE8D6', paddingHorizontal: 16, paddingVertical: 8 },
   card: { backgroundColor: colors.white, borderRadius: 16, padding: 14, flexDirection: 'row', gap: 12 },

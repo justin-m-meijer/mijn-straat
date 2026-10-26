@@ -124,7 +124,7 @@ function TabBar({ tab, onChange, onSettings }: { tab: Tab; onChange: (t: Tab) =>
     { key: 'instellingen', label: 'Adres' },
   ];
   return (
-    <View style={[styles.tabbar, { paddingBottom: insets.bottom || 12 }]} accessibilityRole="tablist">
+    <View style={[styles.tabbar, { paddingBottom: insets.bottom || 12, paddingLeft: insets.left, paddingRight: insets.right }]} accessibilityRole="tablist">
       {items.map((it) => {
         const on = it.key === tab;
         return (
