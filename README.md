@@ -25,16 +25,16 @@ Het adres van de gebruiker blijft op de telefoon. De app haalt de hele gemeentef
 
 ```bash
 cd pipeline
-python3.12 -m venv .venv && source .venv/bin/activate   # macOS-systeem-Python is 3.9: brew install python@3.12
+python3.12 -m venv .venv.nosync && ln -s .venv.nosync .venv   # macOS-systeem-Python is 3.9: brew install python@3.12
+source .venv/bin/activate
 pip install -e '.[dev]'
-chflags nohidden .venv/lib/python3.*/site-packages/*.pth   # zie hieronder
 pytest                                  # 20 tests, zonder netwerk
 
 mijnstraat build --no-llm --limit 20    # snelle rooktest: ophalen + geocoderen
 mijnstraat build                        # volledige run, laatste 90 dagen, met samenvattingen
 ```
 
-In `~/Documents` zet macOS de `hidden`-vlag op nieuwe bestanden. Python 3.12+ slaat verborgen `.pth`-bestanden over, waardoor `mijnstraat` na `pip install -e` faalt met `ModuleNotFoundError: No module named 'mijnstraat'`. De `chflags`-regel hierboven lost dat op.
+Waarom `.venv.nosync`: als `~/Documents` via iCloud synchroniseert, zet macOS de `hidden`-vlag op bestanden in `.venv`. Python 3.12+ slaat verborgen `.pth`-bestanden over, waardoor `mijnstraat` faalt met `ModuleNotFoundError: No module named 'mijnstraat'`. `chflags nohidden` helpt maar even, want de vlag komt terug. iCloud slaat mappen die op `.nosync` eindigen over.
 
 Instellingen via omgevingsvariabelen:
 
