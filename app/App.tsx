@@ -19,7 +19,7 @@ import { Onboarding } from './src/screens/Onboarding';
 import { colors } from './src/theme';
 import type { Feed, NearbyItem, Profile } from './src/types';
 import { RADII, formatRadius } from './src/geo';
-import { T, useSideStrip } from './src/ui';
+import { Glass, T, useSideStrip } from './src/ui';
 
 type Tab = 'feed' | 'kaart';
 
@@ -140,7 +140,7 @@ function Root() {
 // Ruimte bovenin de zijstrook voor de statusiconen van het toestel (tijd, wifi, account).
 const STATUS_CLUSTER_HEIGHT = 170;
 
-/** Navigatie in de zijstrook van brede/vouwbare toestellen: adres en straal in het midden, tabs onderaan. */
+/** Navigatie in de zijstrook van brede/vouwbare toestellen: zwevend glazen paneel met straal en tabs. */
 function SideRail({
   width,
   tab,
@@ -158,33 +158,68 @@ function SideRail({
 }) {
   const insets = useSafeAreaInsets();
   const street = profile.address.split(',')[0];
+  const top = insets.top + STATUS_CLUSTER_HEIGHT;
   return (
-    <View style={[styles.rail, { width, paddingTop: insets.top + STATUS_CLUSTER_HEIGHT, paddingBottom: insets.bottom + 16 }]}>
-      <View style={{ gap: 6 }} accessibilityRole="radiogroup">
-        <Pressable accessibilityRole="button" accessibilityHint="Adres wijzigen" onPress={onSettings} style={{ marginBottom: 6 }}>
-          <T weight="semibold" style={{ color: '#E5EEEE', fontSize: 11, textAlign: 'center' }} numberOfLines={2}>
-            {street}
-          </T>
-        </Pressable>
-        {RADII.map((r) => {
-          const on = r === profile.radius;
-          return (
-            <Pressable
-              key={r}
-              accessibilityRole="radio"
-              accessibilityState={{ selected: on }}
-              onPress={() => onRadiusChange(r)}
-              style={[styles.railRadius, on && { backgroundColor: colors.white }]}
-            >
-              <T weight={on ? 'bold' : 'semibold'} style={{ color: on ? colors.ink : colors.white, fontSize: 12 }} numberOfLines={1}>
-                {r ? formatRadius(r) : 'Gemeente'}
-              </T>
-            </Pressable>
-          );
-        })}
-      </View>
-      <View style={{ gap: 4 }} accessibilityRole="tablist">
-        {(['feed', 'kaart', 'instellingen'] as const).map((key) => {
+    <>
+      {/* effen achter de statusiconen, zodat tijd en wifi altijd leesbaar zijn */}
+      <View style={[styles.railStatus, { width, height: top }]} />
+      <Glass tint={colors.ink} dark style={[styles.rail, { width: width - 12, top, bottom: insets.bottom + 12 }]}>
+        <View style={{ gap: 6 }} accessibilityRole="radiogroup">
+          <Pressable accessibilityRole="button" accessibilityHint="Adres wijzigen" onPress={onSettings} style={{ marginBottom: 6 }}>
+            <T weight="semibold" style={{ color: '#E5EEEE', fontSize: 11, textAlign: 'center' }} numberOfLines={2}>
+              {street}
+            </T>
+          </Pressable>
+          {RADII.map((r) => {
+            const on = r === profile.radius;
+            return (
+              <Pressable key={r} accessibilityRole="radio" accessibilityState={{ selected: on }} onPress={() => onRadiusChange(r)}>
+                <Glass interactive dark tint={on ? colors.sage : undefined} solid="rgba(255,255,255,0.12)" style={styles.railPill}>
+                  <T weight={on ? 'bold' : 'semibold'} style={{ color: on ? colors.ink : colors.white, fontSize: 12 }} numberOfLines={1}>
+                    {r ? formatRadius(r) : 'Gemeente'}
+                  </T>
+                </Glass>
+              </Pressable>
+            );
+          })}
+        </View>
+        <View style={{ gap: 4 }} accessibilityRole="tablist">
+          {TABS.map(({ key, label }) => {
+            const on = key === tab;
+            return (
+              <Pressable
+                key={key}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: on }}
+                onPress={() => (key === 'instellingen' ? onSettings() : onChange(key))}
+              >
+                <Glass interactive dark tint={on ? colors.sage : undefined} solid="transparent" style={styles.railTab}>
+                  <T weight={on ? 'bold' : 'semibold'} style={{ fontSize: 13, color: on ? colors.ink : '#D5E2E6' }}>
+                    {label}
+                  </T>
+                </Glass>
+              </Pressable>
+            );
+          })}
+        </View>
+      </Glass>
+    </>
+  );
+}
+
+const TABS: { key: Tab | 'instellingen'; label: string }[] = [
+  { key: 'feed', label: 'Feed' },
+  { key: 'kaart', label: 'Kaart' },
+  { key: 'instellingen', label: 'Adres' },
+];
+
+/** Zwevende glazen tabbalk op gewone telefoons; de lijst en kaart lopen eronder door. */
+function TabBar({ tab, onChange, onSettings }: { tab: Tab; onChange: (t: Tab) => void; onSettings: () => void }) {
+  const insets = useSafeAreaInsets();
+  return (
+    <Glass style={[styles.tabbar, { bottom: (insets.bottom || 12) + 4, left: 24 + insets.left, right: 24 + insets.right }]}>
+      <View style={{ flexDirection: 'row', flex: 1 }} accessibilityRole="tablist">
+        {TABS.map(({ key, label }) => {
           const on = key === tab;
           return (
             <Pressable
@@ -192,55 +227,28 @@ function SideRail({
               accessibilityRole="tab"
               accessibilityState={{ selected: on }}
               onPress={() => (key === 'instellingen' ? onSettings() : onChange(key))}
-              style={[styles.railTab, on && { backgroundColor: 'rgba(255,255,255,0.16)' }]}
+              style={styles.tab}
             >
-              <T weight={on ? 'bold' : 'semibold'} style={{ fontSize: 13, color: on ? colors.white : '#B9CCD3' }}>
-                {key === 'feed' ? 'Feed' : key === 'kaart' ? 'Kaart' : 'Adres'}
-              </T>
+              <Glass interactive tint={on ? colors.sage : undefined} solid="transparent" style={styles.tabPill}>
+                <T weight={on ? 'bold' : 'semibold'} style={{ fontSize: 13, color: on ? colors.ink : colors.textMuted }}>
+                  {label}
+                </T>
+              </Glass>
             </Pressable>
           );
         })}
       </View>
-    </View>
-  );
-}
-
-function TabBar({ tab, onChange, onSettings }: { tab: Tab; onChange: (t: Tab) => void; onSettings: () => void }) {
-  const insets = useSafeAreaInsets();
-  const items: { key: Tab | 'instellingen'; label: string }[] = [
-    { key: 'feed', label: 'Feed' },
-    { key: 'kaart', label: 'Kaart' },
-    { key: 'instellingen', label: 'Adres' },
-  ];
-  return (
-    <View style={[styles.tabbar, { paddingBottom: insets.bottom || 12, paddingLeft: insets.left, paddingRight: insets.right }]} accessibilityRole="tablist">
-      {items.map((it) => {
-        const on = it.key === tab;
-        return (
-          <Pressable
-            key={it.key}
-            accessibilityRole="tab"
-            accessibilityState={{ selected: on }}
-            onPress={() => (it.key === 'instellingen' ? onSettings() : onChange(it.key))}
-            style={styles.tab}
-          >
-            <View style={[styles.tabMark, on && { backgroundColor: colors.ink }]} />
-            <T weight={on ? 'bold' : 'semibold'} style={{ fontSize: 12, color: on ? colors.ink : colors.textMuted }}>
-              {it.label}
-            </T>
-          </Pressable>
-        );
-      })}
-    </View>
+    </Glass>
   );
 }
 
 const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.ivory },
-  tabbar: { flexDirection: 'row', backgroundColor: colors.white, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 8 },
-  tab: { flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: 44, gap: 4 },
-  rail: { position: 'absolute', top: 0, right: 0, bottom: 0, backgroundColor: colors.ink, paddingHorizontal: 8, justifyContent: 'space-between' },
-  railRadius: { minHeight: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.12)' },
-  railTab: { minHeight: 44, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  tabMark: { width: 24, height: 3, borderRadius: 2, backgroundColor: 'transparent' },
+  tabbar: { position: 'absolute', height: 60, borderRadius: 30, padding: 6 },
+  tab: { flex: 1 },
+  tabPill: { flex: 1, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
+  railStatus: { position: 'absolute', top: 0, right: 0, backgroundColor: colors.ink },
+  rail: { position: 'absolute', right: 6, borderRadius: 24, paddingHorizontal: 6, paddingVertical: 12, justifyContent: 'space-between' },
+  railPill: { minHeight: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
+  railTab: { minHeight: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
 });

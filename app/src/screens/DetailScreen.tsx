@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { formatDistance } from '../geo';
 import { colors } from '../theme';
 import type { NearbyItem, Profile } from '../types';
-import { Button, CategoryBadge, T, column, formatDateLong, useSidePadding } from '../ui';
+import { Button, CategoryBadge, Glass, T, column, formatDateLong, useSidePadding } from '../ui';
 
 export function DetailScreen({ item, profile, onBack }: { item: NearbyItem; profile: Profile; onBack: () => void }) {
   const insets = useSafeAreaInsets();
@@ -69,34 +69,24 @@ export function DetailScreen({ item, profile, onBack }: { item: NearbyItem; prof
         onPress={onBack}
         style={[styles.back, { top: insets.top + 8, left: 12 + insets.left }]}
       >
-        <T weight="extrabold" style={{ fontSize: 20, color: colors.text }}>
-          ‹
-        </T>
+        <Glass interactive style={styles.backGlass}>
+          <T weight="extrabold" style={{ fontSize: 20, color: colors.text }}>
+            ‹
+          </T>
+        </Glass>
       </Pressable>
 
-      <View style={[styles.footer, { paddingBottom: insets.bottom + 12, paddingLeft: 12 + insets.left, paddingRight: 12 + insets.right }]}>
-        <Button label="Lees en reageer" onPress={() => Linking.openURL(item.url)} style={{ flex: 1, maxWidth: 680, marginHorizontal: 'auto' }} />
-      </View>
+      <Glass style={[styles.footer, { bottom: (insets.bottom || 12) + 4, left: 16 + insets.left, right: 16 + insets.right }]}>
+        <Button label="Lees en reageer" onPress={() => Linking.openURL(item.url)} style={{ flex: 1 }} />
+      </Glass>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   card: { backgroundColor: colors.white, borderRadius: 16, padding: 16, gap: 8 },
-  back: {
-    position: 'absolute',
-    left: 16,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.white,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
-  },
-  footer: { position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: colors.white, borderTopWidth: 1, borderTopColor: colors.border, padding: 12, flexDirection: 'row' },
+  back: { position: 'absolute', width: 44, height: 44 },
+  backGlass: { flex: 1, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  // zwevende glazen balk; de knop zelf blijft effen ink voor leesbaarheid
+  footer: { position: 'absolute', borderRadius: 34, padding: 8, flexDirection: 'row' },
 });

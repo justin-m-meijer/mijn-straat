@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RADII, formatDistance, formatRadius, nearby } from '../geo';
 import { categories, colors, type Category } from '../theme';
 import type { Feed, NearbyItem, Profile } from '../types';
-import { CategoryDot, T, column, formatDate, useSidePadding, useSideStrip } from '../ui';
+import { CategoryDot, FLOATING_TAB_SPACE, Glass, T, column, formatDate, useSidePadding, useSideStrip } from '../ui';
 
 type Filter = 'alles' | Category;
 
@@ -55,16 +55,12 @@ export function FeedScreen({
               {RADII.map((r) => {
                 const on = r === profile.radius;
                 return (
-                  <Pressable
-                    key={r}
-                    accessibilityRole="radio"
-                    accessibilityState={{ selected: on }}
-                    onPress={() => onRadiusChange(r)}
-                    style={[styles.segment, on && { backgroundColor: colors.white }]}
-                  >
-                    <T weight={on ? 'bold' : 'semibold'} style={{ color: on ? colors.ink : colors.white, fontSize: 13 }} numberOfLines={1}>
-                      {formatRadius(r)}
-                    </T>
+                  <Pressable key={r} accessibilityRole="radio" accessibilityState={{ selected: on }} onPress={() => onRadiusChange(r)} style={{ flex: 1 }}>
+                    <Glass interactive dark tint={on ? colors.sage : undefined} solid="transparent" style={styles.segment}>
+                      <T weight={on ? 'bold' : 'semibold'} style={{ color: on ? colors.ink : colors.white, fontSize: 13 }} numberOfLines={1}>
+                        {formatRadius(r)}
+                      </T>
+                    </Glass>
                   </Pressable>
                 );
               })}
@@ -74,16 +70,12 @@ export function FeedScreen({
             {filters.map((f) => {
               const on = f === filter;
               return (
-                <Pressable
-                  key={f}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: on }}
-                  onPress={() => setFilter(f)}
-                  style={[styles.chip, on ? { backgroundColor: colors.sage, borderColor: colors.sage } : null]}
-                >
-                  <T weight="semibold" style={{ color: on ? colors.ink : colors.white, fontSize: 13 }}>
-                    {f === 'alles' ? 'Alles' : categories[f].label}
-                  </T>
+                <Pressable key={f} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => setFilter(f)}>
+                  <Glass interactive dark tint={on ? colors.sage : undefined} solid="rgba(255,255,255,0.12)" style={styles.chip}>
+                    <T weight="semibold" style={{ color: on ? colors.ink : colors.white, fontSize: 13 }}>
+                      {f === 'alles' ? 'Alles' : categories[f].label}
+                    </T>
+                  </Glass>
                 </Pressable>
               );
             })}
@@ -105,7 +97,7 @@ export function FeedScreen({
         data={items}
         keyExtractor={(i) => i.id}
         ListHeaderComponent={header}
-        contentContainerStyle={{ paddingBottom: 24 }}
+        contentContainerStyle={{ paddingBottom: rail ? 24 : insets.bottom + FLOATING_TAB_SPACE }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.white} />}
         ListEmptyComponent={
           <T style={{ textAlign: 'center', color: colors.textMuted, marginTop: 40 }}>{profile.radius ? `Geen berichten binnen ${formatDistance(profile.radius)}.` : 'Geen berichten in de gemeente.'}</T>
@@ -145,9 +137,9 @@ const styles = StyleSheet.create({
   // vult de overscroll boven de kop bij pull-to-refresh, zodat daar geen lichte strook verschijnt
   bounce: { position: 'absolute', left: 0, right: 0, top: -1000, height: 1000, backgroundColor: colors.ink },
   statusStrip: { position: 'absolute', top: 0, left: 0, right: 0, backgroundColor: colors.ink },
-  chip: { height: 36, paddingHorizontal: 14, borderRadius: 18, borderWidth: 1, borderColor: 'rgba(255,255,255,0.4)', justifyContent: 'center' },
-  segments: { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 12, padding: 3, gap: 3 },
-  segment: { flex: 1, minHeight: 34, borderRadius: 9, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
+  chip: { height: 36, paddingHorizontal: 14, borderRadius: 18, justifyContent: 'center' },
+  segments: { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 20, padding: 3, gap: 3 },
+  segment: { minHeight: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
   sample: { backgroundColor: '#EFE8D6', paddingHorizontal: 16, paddingVertical: 8 },
   card: { backgroundColor: colors.white, borderRadius: 16, padding: 14, flexDirection: 'row', gap: 12 },
 });

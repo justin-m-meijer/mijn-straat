@@ -1,4 +1,19 @@
-import { Pressable, StyleSheet, Text, View, type PressableProps, type TextProps, type ViewStyle } from 'react-native';
+import { BlurView } from 'expo-blur';
+import { GlassView, isGlassEffectAPIAvailable, isLiquidGlassAvailable } from 'expo-glass-effect';
+import { useEffect, useState, type ReactNode } from 'react';
+import {
+  AccessibilityInfo,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  type ColorValue,
+  type PressableProps,
+  type StyleProp,
+  type TextProps,
+  type ViewStyle,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { categories, colors, fonts, type Category } from './theme';
@@ -92,3 +107,61 @@ const styles = StyleSheet.create({
   button: { minHeight: 52, borderRadius: 26, paddingHorizontal: 20, alignItems: 'center', justifyContent: 'center' },
   badge: { alignSelf: 'flex-start', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 },
 });
+
+// Liquid Glass (iOS 26+). Daarbuiten blur, en bij "Verminder transparantie" een effen kleur.
+type GlassMode = 'glass' | 'blur' | 'solid';
+
+const liquidGlass = Platform.OS === 'ios' && isGlassEffectAPIAvailable() && isLiquidGlassAvailable();
+
+export function useGlassMode(): GlassMode {
+  const [reduce, setReduce] = useState(false);
+  useEffect(() => {
+    AccessibilityInfo.isReduceTransparencyEnabled().then(setReduce);
+    const sub = AccessibilityInfo.addEventListener('reduceTransparencyChanged', setReduce);
+    return () => sub.remove();
+  }, []);
+  if (reduce) return 'solid';
+  return liquidGlass ? 'glass' : 'blur';
+}
+
+/**
+ * Zwevende glazen laag voor navigatie en knoppen boven scrollende inhoud.
+ * `tint` kleurt het glas (Jumpstart ink of sage); `solid` is de kleur zonder glas.
+ */
+export function Glass({
+  style,
+  tint,
+  solid = colors.white,
+  dark = false,
+  interactive = false,
+  children,
+}: {
+  style?: StyleProp<ViewStyle>;
+  tint?: ColorValue;
+  solid?: ColorValue;
+  dark?: boolean;
+  interactive?: boolean;
+  children?: ReactNode;
+}) {
+  const mode = useGlassMode();
+  if (mode === 'glass') {
+    return (
+      <GlassView style={style} tintColor={tint} isInteractive={interactive} colorScheme={dark ? 'dark' : 'light'}>
+        {children}
+      </GlassView>
+    );
+  }
+  if (mode === 'blur') {
+    return (
+      <View style={[style, { overflow: 'hidden' }]}>
+        <BlurView intensity={40} tint={dark ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
+        {tint ? <View style={[StyleSheet.absoluteFill, { backgroundColor: tint, opacity: 0.55 }]} /> : null}
+        {children}
+      </View>
+    );
+  }
+  return <View style={[style, { backgroundColor: tint ?? solid }]}>{children}</View>;
+}
+
+// Ruimte onder de lijst voor de zwevende tabbalk op gewone telefoons.
+export const FLOATING_TAB_SPACE = 96;
