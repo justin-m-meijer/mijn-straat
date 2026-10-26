@@ -7,6 +7,7 @@ Let op: api.politie.nl heeft geen duidelijke licentie. Prima voor de POC, vraag 
 from __future__ import annotations
 
 import datetime as dt
+import json
 import math
 from typing import Any, Iterable
 
@@ -76,17 +77,26 @@ def grid(points: Iterable[tuple[float, float]], step: float = 0.02) -> list[tupl
 def parse_wijkagent(raw: dict) -> dict | None:
     naam = _first(raw, "naam", "name")
     polygon = _first(raw, "werkgebiedpolygoon", "werkgebiedPolygoon")
+    if isinstance(polygon, str):  # de API levert de GeoJSON als string
+        try:
+            polygon = json.loads(polygon)
+        except ValueError:
+            polygon = None
     if not naam or not polygon:
         return None
+    twitter = raw.get("twitter")
+    if isinstance(twitter, dict):  # {"list": ..., "accountnaam": ...}, vaak leeg
+        account = str(twitter.get("accountnaam") or "").lstrip("@")
+        twitter = f"https://x.com/{account}" if account else None
     return {
         "id": str(_first(raw, "uid", "id") or naam),
         "naam": naam,
         "functie": _first(raw, "functie", "titel") or "Wijkagent",
         "werkgebied": html_to_text(_first(raw, "werkgebied", "werkgebiedomschrijving") or ""),
         "telefoon": _first(raw, "telefoon", "telefoonnummer") or "0900-8844",
-        "facebook": _first(raw, "facebook"),
-        "twitter": _first(raw, "twitter", "x"),
-        "instagram": _first(raw, "instagram"),
+        "facebook": _first(raw, "facebookurl", "facebook"),
+        "twitter": twitter or None,
+        "instagram": _first(raw, "instagramurl", "instagram"),
         "url": _first(raw, "url"),
         "polygoon": polygon,
     }
@@ -138,7 +148,8 @@ def parse_news(raw: dict, center: tuple[float, float]) -> Item | None:
     )
 
 
-def fetch_news(client: httpx.Client, center: tuple[float, float], days: int, radius_km: int = 15) -> list[Item]:
+# De API accepteert alleen een straal van 0.5, 2, 5, 10 of 25 km; 15 geeft een 400.
+def fetch_news(client: httpx.Client, center: tuple[float, float], days: int, radius_km: float = 10) -> list[Item]:
     since = (dt.date.today() - dt.timedelta(days=days)).isoformat()
     items: dict[str, Item] = {}
     offset = 0
@@ -147,15 +158,17 @@ def fetch_news(client: httpx.Client, center: tuple[float, float], days: int, rad
             f"{POLITIE_API}/nieuws",
             params={"lat": center[0], "lon": center[1], "radius": radius_km, "maxnumberofitems": 25, "offset": offset},
         )
-        if resp.status_code in (204, 400):  # 400: offset voorbij het einde
+        if resp.status_code == 204:  # offset voorbij het einde
             break
         resp.raise_for_status()
-        page = [parse_news(r, center) for r in _records(resp.json())]
+        payload = resp.json()
+        page = [parse_news(r, center) for r in _records(payload)]
         page = [i for i in page if i]
         for item in page:
             if item.published >= since:
                 items.setdefault(item.url, item)
-        if len(page) < 25 or min(i.published for i in page) < since:
+        last = isinstance(payload, dict) and (payload.get("iterator") or {}).get("last")
+        if last or len(page) < 25 or min(i.published for i in page) < since:
             break
         offset += 25
     return sorted(items.values(), key=lambda i: i.published, reverse=True)
@@ -230,14 +243,17 @@ def build_veiligheid(rows: list[dict], types: dict[str, str], buurten: dict[str,
 
 def fetch_veiligheid(client: httpx.Client, gemeente: str, months: int = 24) -> dict:
     code = gemeentecode(client, gemeente)
-    types = select_crime_types(client.get(f"{CBS_ODATA}/SoortMisdrijf").raise_for_status().json()["value"])
+    dimension = client.get(f"{CBS_ODATA}/SoortMisdrijf").raise_for_status().json()["value"]
+    types = select_crime_types(dimension)
+    # CBS vult sleutels aan met spaties ('0.0.0 ') en filtert daar exact op.
+    raw_keys = {str(r["Key"]).strip(): str(r["Key"]) for r in dimension}
     area_filter = f"startswith(Key,'BU{code}')"
     buurten = {
         str(r["Key"]).strip(): str(r["Title"]).strip()
         for r in client.get(f"{CBS_ODATA}/WijkenEnBuurten", params={"$filter": area_filter}).raise_for_status().json()["value"]
     }
     periods = last_periods(months)
-    type_filter = " or ".join(f"SoortMisdrijf eq '{k}'" for k in types)
+    type_filter = " or ".join(f"SoortMisdrijf eq '{raw_keys[k]}'" for k in types)
     flt = (
         f"(startswith(WijkenEnBuurten,'BU{code}') or startswith(WijkenEnBuurten,'GM{code}'))"
         f" and Perioden ge '{periods[0]}' and ({type_filter})"

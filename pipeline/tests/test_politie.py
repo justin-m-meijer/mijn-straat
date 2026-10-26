@@ -37,7 +37,9 @@ def test_parse_wijkagent_keeps_polygon_and_skips_incomplete():
     agent = politie.parse_wijkagent(raw[0])
     assert agent["naam"] == "Marco Voorbeeld"
     assert agent["werkgebied"] == "Doornenburg en Gendt"
-    assert agent["polygoon"]["type"] == "FeatureCollection"
+    assert agent["polygoon"]["type"] == "FeatureCollection"  # de API levert een JSON-string
+    assert agent["facebook"] == "https://www.facebook.com/politielingewaard"
+    assert agent["twitter"] is None and agent["instagram"] is None
     assert politie.parse_wijkagent(raw[1]) is None
 
 
@@ -80,6 +82,7 @@ def _politie_handler(request: httpx.Request) -> httpx.Response:
     if host == "api.politie.nl" and path.endswith("/wijkagenten"):
         return httpx.Response(200, json=_json("politie_wijkagenten.json"))
     if host == "api.politie.nl" and path.endswith("/nieuws"):
+        assert request.url.params["radius"] in ("0.5", "2", "5", "10", "25")
         return httpx.Response(200, json=_json("politie_nieuws.json"))
     if host == "api.pdok.nl" and request.url.params.get("fq") == "type:gemeente":
         return httpx.Response(200, json={"response": {"docs": [{"gemeentecode": "1705"}]}})
@@ -90,6 +93,7 @@ def _politie_handler(request: httpx.Request) -> httpx.Response:
             return httpx.Response(200, json={"value": [{"Key": "BU17050102", "Title": "Centrum Gendt"}]})
         if path.endswith("/TypedDataSet"):
             assert "startswith(WijkenEnBuurten,'BU1705')" in request.url.params["$filter"]
+            assert "SoortMisdrijf eq '0.0.0  '" in request.url.params["$filter"]  # sleutel mét opvulling
             return httpx.Response(200, json={"value": _cbs_rows(politie.last_periods(24))})
     return None
 
