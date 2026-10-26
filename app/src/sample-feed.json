@@ -1,0 +1,15 @@
+{
+ "gemeente": "Lingewaard",
+ "generated_at": "2026-10-26T20:00:00+00:00",
+ "model": "voorbeeld",
+ "sample": true,
+ "stats": {"items": 6, "located": 4},
+ "items": [
+  {"id": "sample:1", "source": "bekendmakingen", "title": "Aanvraag omgevingsvergunning, plaatsen dakkapel, Voorbeeldstraat 18 te Huissen", "published": "2026-10-24", "url": "https://zoek.officielebekendmakingen.nl/", "doc_type": "Gemeenteblad", "subjects": [], "category": "vergunning", "summary": "Voorbeeld: de bewoners van Voorbeeldstraat 18 willen een dakkapel aan de achterkant van hun huis. De gemeente beslist binnen acht weken. Daarna kun je zes weken bezwaar maken.", "location_hint": "Voorbeeldstraat 18", "address": "Voorbeeldstraat 18, Huissen", "lat": 51.9372, "lon": 5.9405},
+  {"id": "sample:2", "source": "bekendmakingen", "title": "Verkeersbesluit tijdelijke afsluiting Voorbeeldweg", "published": "2026-10-23", "url": "https://zoek.officielebekendmakingen.nl/", "doc_type": "Staatscourant", "subjects": [], "category": "verkeer", "summary": "Voorbeeld: de Voorbeeldweg is van 3 tot en met 7 november dicht voor werk aan de riolering. Er staan omleidingsborden.", "location_hint": "Voorbeeldweg", "address": "Voorbeeldweg, Huissen", "lat": 51.9351, "lon": 5.9372},
+  {"id": "sample:3", "source": "bekendmakingen", "title": "Evenementenvergunning najaarsmarkt Huissen", "published": "2026-10-21", "url": "https://zoek.officielebekendmakingen.nl/", "doc_type": "Gemeenteblad", "subjects": [], "category": "evenement", "summary": "Voorbeeld: op zaterdag 15 november is er een markt in het centrum, van 9.00 tot 17.00 uur. Een deel van het centrum is dan afgesloten voor auto's.", "location_hint": "", "address": "Centrum, Huissen", "lat": 51.9380, "lon": 5.9412},
+  {"id": "sample:4", "source": "bekendmakingen", "title": "Verleende omgevingsvergunning kappen 2 bomen, Voorbeeldlaan 4 te Bemmel", "published": "2026-10-19", "url": "https://zoek.officielebekendmakingen.nl/", "doc_type": "Gemeenteblad", "subjects": [], "category": "vergunning", "summary": "Voorbeeld: de gemeente geeft toestemming om twee bomen te kappen. Bezwaar maken kan tot zes weken na deze publicatie.", "location_hint": "Voorbeeldlaan 4", "address": "Voorbeeldlaan 4, Bemmel", "lat": 51.8931, "lon": 5.8962},
+  {"id": "sample:5", "source": "bekendmakingen", "title": "Verordening afvalstoffenheffing 2027", "published": "2026-10-17", "url": "https://zoek.officielebekendmakingen.nl/", "doc_type": "Gemeenteblad", "subjects": [], "category": "regels", "summary": "Voorbeeld: de gemeente legt de tarieven voor afval in 2027 vast. Dit geldt voor alle huishoudens in Lingewaard.", "location_hint": "", "address": "", "lat": null, "lon": null},
+  {"id": "sample:6", "source": "bekendmakingen", "title": "Besluit gemeenteraad over laadpalen in woonwijken", "published": "2026-10-15", "url": "https://zoek.officielebekendmakingen.nl/", "doc_type": "Gemeenteblad", "subjects": [], "category": "raad", "summary": "Voorbeeld: de raad besluit hoe en waar er publieke laadpalen bij komen. Bewoners kunnen een laadpaal aanvragen bij de gemeente.", "location_hint": "", "address": "", "lat": null, "lon": null}
+ ]
+}

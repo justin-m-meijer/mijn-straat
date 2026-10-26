@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Synthetisch voorbeeld in de vorm van een SRU 2.0-antwoord van repository.overheid.nl. Geen echte bekendmakingen. -->
+<sru:searchRetrieveResponse xmlns:sru="http://docs.oasis-open.org/ns/search-ws/sruResponse"
+    xmlns:gzd="http://standaarden.overheid.nl/sru"
+    xmlns:dcterms="http://purl.org/dc/terms/"
+    xmlns:overheidwetgeving="http://standaarden.overheid.nl/wetgeving/"
+    xmlns:gml="http://www.opengis.net/gml">
+  <sru:version>2.0</sru:version>
+  <sru:numberOfRecords>3</sru:numberOfRecords>
+  <sru:records>
+    <sru:record>
+      <sru:recordSchema>gzd</sru:recordSchema>
+      <sru:recordData>
+        <gzd:gzd>
+          <gzd:originalData>
+            <overheidwetgeving:meta>
+              <overheidwetgeving:owmskern>
+                <dcterms:identifier>gmb-2026-900001</dcterms:identifier>
+                <dcterms:title>Aanvraag omgevingsvergunning, plaatsen dakkapel, Voorbeeldstraat 18 te Huissen</dcterms:title>
+                <dcterms:type>Gemeenteblad</dcterms:type>
+                <dcterms:creator>Lingewaard</dcterms:creator>
+              </overheidwetgeving:owmskern>
+              <overheidwetgeving:owmsmantel>
+                <dcterms:subject>Ruimtelijke ordening | Bouwen en verbouwen</dcterms:subject>
+                <dcterms:available>2026-10-20</dcterms:available>
+              </overheidwetgeving:owmsmantel>
+              <overheidwetgeving:tpmeta>
+                <overheidwetgeving:postcodeHuisnummer>6851 AB 18</overheidwetgeving:postcodeHuisnummer>
+              </overheidwetgeving:tpmeta>
+            </overheidwetgeving:meta>
+          </gzd:originalData>
+          <gzd:enrichedData>
+            <gzd:preferredUrl>https://zoek.officielebekendmakingen.nl/gmb-2026-900001.html</gzd:preferredUrl>
+          </gzd:enrichedData>
+        </gzd:gzd>
+      </sru:recordData>
+    </sru:record>
+    <sru:record>
+      <sru:recordData>
+        <gzd:gzd>
+          <gzd:originalData>
+            <overheidwetgeving:meta>
+              <dcterms:identifier>stcrt-2026-900002</dcterms:identifier>
+              <dcterms:title>Verkeersbesluit tijdelijke afsluiting Kerkstraat</dcterms:title>
+              <dcterms:type>Staatscourant</dcterms:type>
+              <dcterms:available>2026-10-18</dcterms:available>
+              <overheidwetgeving:locatiegegevens>
+                <gml:Point><gml:pos>191000 435000</gml:pos></gml:Point>
+              </overheidwetgeving:locatiegegevens>
+            </overheidwetgeving:meta>
+          </gzd:originalData>
+        </gzd:gzd>
+      </sru:recordData>
+    </sru:record>
+    <sru:record>
+      <sru:recordData>
+        <gzd:gzd>
+          <gzd:originalData>
+            <overheidwetgeving:meta>
+              <dcterms:identifier>gmb-2026-900003</dcterms:identifier>
+              <dcterms:title>Verordening afvalstoffenheffing 2027</dcterms:title>
+              <dcterms:type>Gemeenteblad</dcterms:type>
+              <dcterms:available>2026-10-10</dcterms:available>
+            </overheidwetgeving:meta>
+          </gzd:originalData>
+        </gzd:gzd>
+      </sru:recordData>
+    </sru:record>
+  </sru:records>
+  <sru:nextRecordPosition>4</sru:nextRecordPosition>
+</sru:searchRetrieveResponse>
