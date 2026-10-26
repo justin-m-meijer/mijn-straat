@@ -72,6 +72,14 @@ export function formatDateLong(iso: string): string {
 // Brede schermen (vouwbare telefoons, iPad): inhoud niet breder dan dit, gecentreerd.
 export const MAX_CONTENT_WIDTH = 680;
 
+// iPhone Duo e.d.: een brede strook opzij (statusbalk staat daar) gebruiken we als navigatierail.
+export const SIDE_STRIP_MIN = 56;
+
+export function useSideStrip(): number {
+  const insets = useSafeAreaInsets();
+  return insets.right >= SIDE_STRIP_MIN ? insets.right : 0;
+}
+
 // Zijmarges die rekening houden met camera-uitsparingen en afgeronde hoeken links/rechts.
 export function useSidePadding(base = 16) {
   const insets = useSafeAreaInsets();

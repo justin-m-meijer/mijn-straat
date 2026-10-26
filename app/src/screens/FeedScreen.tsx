@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RADII, formatDistance, formatRadius, nearby } from '../geo';
 import { categories, colors, type Category } from '../theme';
 import type { Feed, NearbyItem, Profile } from '../types';
-import { CategoryDot, T, column, formatDate, useSidePadding } from '../ui';
+import { CategoryDot, T, column, formatDate, useSidePadding, useSideStrip } from '../ui';
 
 type Filter = 'alles' | Category;
 
@@ -28,6 +28,7 @@ export function FeedScreen({
 }) {
   const insets = useSafeAreaInsets();
   const side = useSidePadding();
+  const rail = useSideStrip() > 0; // adres en straal staan dan in de zijrail
   const [filter, setFilter] = useState<Filter>('alles');
   const all = useMemo(() => nearby(feed, profile), [feed, profile]);
   const items = filter === 'alles' ? all : all.filter((i) => i.category === filter);
@@ -41,10 +42,13 @@ export function FeedScreen({
           <T weight="extrabold" style={{ color: colors.white, fontSize: 20 }}>
             Mijn Straat
           </T>
-          <T style={{ color: '#E5EEEE', fontSize: 13 }}>
-            {profile.address}
-          </T>
+          {!rail && (
+            <T style={{ color: '#E5EEEE', fontSize: 13 }}>
+              {profile.address}
+            </T>
+          )}
         </Pressable>
+        {!rail && (
         <View style={styles.segments} accessibilityRole="radiogroup">
           {RADII.map((r) => {
             const on = r === profile.radius;
@@ -63,6 +67,7 @@ export function FeedScreen({
             );
           })}
         </View>
+        )}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingRight: 16 }}>
           {filters.map((f) => {
             const on = f === filter;
