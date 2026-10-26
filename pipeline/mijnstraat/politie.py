@@ -17,6 +17,10 @@ from .models import Item
 from .xmlutil import html_to_text
 
 POLITIE_API = "https://api.politie.nl/v4"
+# api.politie.nl geeft 403 op onze eigen User-Agent maar niet op de standaard van httpx.
+# Bewuste keuze van Justin (2026-10-26) voor de privé-POC; vóór een publieke release
+# toestemming vragen bij gegevensautoriteit@politie.nl en dan weer onze eigen naam sturen.
+POLITIE_HEADERS = {"User-Agent": f"python-httpx/{httpx.__version__}"}
 CBS_ODATA = "https://dataderden.cbs.nl/ODataApi/odata/47022NED"
 LOCATIESERVER = "https://api.pdok.nl/bzk/locatieserver/search/v3_1/free"
 
@@ -105,7 +109,7 @@ def parse_wijkagent(raw: dict) -> dict | None:
 def fetch_wijkagenten(client: httpx.Client, points: list[tuple[float, float]]) -> list[dict]:
     found: dict[str, dict] = {}
     for lat, lon in points:
-        resp = client.get(f"{POLITIE_API}/wijkagenten", params={"lat": lat, "lon": lon, "radius": 2})
+        resp = client.get(f"{POLITIE_API}/wijkagenten", params={"lat": lat, "lon": lon, "radius": 2}, headers=POLITIE_HEADERS)
         if resp.status_code == 204:
             continue
         resp.raise_for_status()
@@ -157,6 +161,7 @@ def fetch_news(client: httpx.Client, center: tuple[float, float], days: int, rad
         resp = client.get(
             f"{POLITIE_API}/nieuws",
             params={"lat": center[0], "lon": center[1], "radius": radius_km, "maxnumberofitems": 25, "offset": offset},
+            headers=POLITIE_HEADERS,
         )
         if resp.status_code == 204:  # offset voorbij het einde
             break
