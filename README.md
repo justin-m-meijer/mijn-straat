@@ -18,7 +18,7 @@ Het adres van de gebruiker blijft op de telefoon. De app haalt de hele gemeentef
 ## Vereisten
 
 - macOS met Python 3.11 of nieuwer en Node 20 of nieuwer
-- [Ollama](https://ollama.com) met minstens één model, bijvoorbeeld `ollama pull qwen3:30b-a3b`
+- [Ollama](https://ollama.com) met minstens één model, bijvoorbeeld `ollama pull gemma3:12b` (8 GB, standaard)
 - Expo Go op je telefoon, op hetzelfde wifi-netwerk als je Mac
 
 ## 1. Pijplijn
@@ -42,7 +42,7 @@ Instellingen via omgevingsvariabelen:
 | --- | --- | --- |
 | `MIJNSTRAAT_GEMEENTE` | `Lingewaard` | Naam zoals in `dt.creator` van de bekendmakingen |
 | `MIJNSTRAAT_DAYS` | `90` | Hoe ver terug |
-| `MIJNSTRAAT_MODEL` | `qwen3:30b-a3b` | Ollama-model |
+| `MIJNSTRAAT_MODEL` | `gemma3:12b` | Ollama-model |
 | `OLLAMA_URL` | `http://localhost:11434` | Ollama-adres |
 
 Samenvattingen, teksten en geocodes worden gecachet in `data/cache/`. Een nachtelijke run doet dus alleen nieuwe stukken.
@@ -50,8 +50,8 @@ Samenvattingen, teksten en geocodes worden gecachet in `data/cache/`. Een nachte
 ### Modellen vergelijken
 
 ```bash
-ollama pull gemma3:27b && ollama pull mistral-small3.2:24b
-mijnstraat compare --n 20 --models qwen3:30b-a3b,gemma3:27b,mistral-small3.2:24b
+ollama pull qwen3:8b && ollama pull qwen3:30b-a3b
+mijnstraat compare --n 20 --models gemma3:12b,qwen3:8b,qwen3:30b-a3b
 open ../data/vergelijking-lingewaard.md
 ```
 

@@ -1,6 +1,7 @@
 """Samenvatten in gewone taal met een lokaal model via Ollama."""
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 
@@ -12,7 +13,12 @@ SYSTEM = (
     "Je vat officiële bekendmakingen van een Nederlandse gemeente samen voor bewoners. "
     "Schrijf in gewone taal (B1), maximaal drie korte zinnen. Noem wat er gebeurt, waar, "
     "en wat een bewoner kan doen (reageren, bezwaar maken) met de termijn als die in de tekst staat. "
-    "Verzin niets: staat iets niet in de tekst, laat het dan weg."
+    "Verzin niets: staat iets niet in de tekst, laat het dan weg. "
+    "Regels: "
+    "1. Gaat het om een aanvraag of melding? Dan is er nog geen besluit en kan nog niemand bezwaar maken; zeg dat. Gaat het om een besluit, verleende vergunning, toestemming of vastgesteld plan? Dan is er wél een besluit: noem de mogelijkheid voor bezwaar of beroep zoals die in de tekst staat. "
+    "2. Noem nooit een termijn, aantal dagen of datum die niet letterlijk in de tekst staat. "
+    "3. Bezwaar maak je bij de gemeente tegen een besluit; beroep stel je in bij een rechter of de Raad van State. "
+    "Gebruik het woord dat in de tekst staat."
 )
 
 PROMPT = """Titel: {title}
@@ -47,6 +53,12 @@ class Summarizer:
         self.client = client
         self.base_url = base_url.rstrip("/")
         self.model = model
+
+    @property
+    def cache_key(self) -> str:
+        """Model plus prompt-hash, zodat een nieuwe prompt niet de oude samenvattingen hergebruikt."""
+        prompt_hash = hashlib.sha1((SYSTEM + PROMPT).encode()).hexdigest()[:8]
+        return f"{self.model.replace(':', '_').replace('/', '_')}.{prompt_hash}"
 
     def summarize(self, title: str, text: str, max_chars: int = 24_000) -> dict:
         body = {

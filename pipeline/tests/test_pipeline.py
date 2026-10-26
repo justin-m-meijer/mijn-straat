@@ -113,6 +113,26 @@ def test_geocoder_caches(tmp_path):
     assert json.loads((tmp_path / "geo.json").read_text())["Nergensweg 1"] is None
 
 
+def test_system_prompt_rules():
+    from mijnstraat.summarize import SYSTEM
+
+    s = SYSTEM.lower()
+    assert "aanvraag of melding" in s and "nog geen besluit" in s
+    assert "wél een besluit" in s  # besluiten mogen niet als aanvraag worden samengevat
+    assert "nooit een termijn" in s and "letterlijk in de tekst" in s
+    assert "bezwaar" in s and "beroep" in s and "raad van state" in s
+
+
+def test_summary_cache_key_changes_with_prompt(monkeypatch):
+    from mijnstraat import summarize
+
+    s = Summarizer(httpx.Client(), "http://localhost:11434", "gemma3:12b")
+    before = s.cache_key
+    assert before.startswith("gemma3_12b.")
+    monkeypatch.setattr(summarize, "SYSTEM", summarize.SYSTEM + " Extra regel.")
+    assert s.cache_key != before
+
+
 def test_summarizer_request_shape():
     seen = {}
 
