@@ -158,3 +158,16 @@ def test_build_survives_police_outage(tmp_path, monkeypatch):
     out = tmp_path / "public" / "lingewaard"
     assert json.loads((out / "feed.json").read_text())["stats"]["items"] == 3
     assert not (out / "wijkagenten.json").exists()
+
+
+def test_politie_requests_use_generic_user_agent():
+    seen = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request.headers["user-agent"])
+        return httpx.Response(204)
+
+    client = httpx.Client(transport=httpx.MockTransport(handler), headers={"User-Agent": "MijnStraat-POC/0.1 (Jumpstart Media)"})
+    politie.fetch_wijkagenten(client, [(51.876, 5.976)])
+    politie.fetch_news(client, (51.876, 5.976), 90)
+    assert seen and all(ua.startswith("python-httpx/") for ua in seen)
