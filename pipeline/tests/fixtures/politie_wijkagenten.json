@@ -1,0 +1,41 @@
+{
+  "iterator": {
+    "last": true,
+    "offset": 0
+  },
+  "wijkagenten": [
+    {
+      "displayName": null,
+      "links": null,
+      "uid": "wa-1",
+      "url": "https://www.politie.nl/mijn-buurt/wijkagenten/wa-1",
+      "publicatiedatum": "2026-06-09 10:29:09",
+      "naam": "Marco Voorbeeld",
+      "afbeelding": {
+        "url": "https://www.politie.nl/binaries/voorbeeld.png",
+        "alttext": "Wijkagent Marco Voorbeeld"
+      },
+      "telefoon": "0900-8844",
+      "twitter": {
+        "list": "https://x.com//",
+        "title": "",
+        "accountnaam": ""
+      },
+      "facebookurl": "https://www.facebook.com/politielingewaard",
+      "instagramurl": "",
+      "werkgebied": "Doornenburg en Gendt",
+      "extrainformatie": "",
+      "locaties": [
+        {
+          "latitude": 51.876,
+          "longitude": 5.976
+        }
+      ],
+      "werkgebiedpolygoon": "{\"type\":\"FeatureCollection\",\"features\":[{\"type\":\"Feature\",\"geometry\":{\"type\":\"Polygon\",\"coordinates\":[[[5.95,51.86],[6.02,51.86],[6.02,51.9],[5.95,51.9],[5.95,51.86]]]},\"properties\":{}}]}"
+    },
+    {
+      "uid": "wa-zonder-gebied",
+      "naam": "Zonder Polygoon"
+    }
+  ]
+}

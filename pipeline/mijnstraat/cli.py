@@ -10,7 +10,7 @@ from pathlib import Path
 
 import httpx
 
-from . import bekendmakingen
+from . import bekendmakingen, politie
 from .categorize import categorize
 from .config import Config
 from .geocode import Geocoder, guess_address
@@ -82,6 +82,37 @@ def _geocode(geocoder: Geocoder, items: list[Item]) -> None:
     geocoder.save()
 
 
+def _politie(client: httpx.Client, cfg: Config, items: list[Item], out: Path) -> list[Item]:
+    """Wijkagenten en misdrijfcijfers als losse bestanden; politienieuws als extra feedberichten.
+
+    Een storing bij de politie of het CBS mag de feed met bekendmakingen niet tegenhouden."""
+    points = [(i.lat, i.lon) for i in items if i.lat is not None and i.lon is not None]
+    center = politie.centroid(points)
+    news: list[Item] = []
+    if center:
+        try:
+            _log("Wijkagenten ophalen...")
+            agents = politie.fetch_wijkagenten(client, politie.grid(points))
+            (out / "wijkagenten.json").write_text(json.dumps({"wijkagenten": agents}, ensure_ascii=False, indent=1))
+            _log(f"  {len(agents)} wijkagenten")
+        except (httpx.HTTPError, ValueError) as e:
+            _log(f"  wijkagenten mislukt: {e}")
+        try:
+            _log("Politienieuws ophalen...")
+            news = politie.fetch_news(client, center, cfg.days)
+            _log(f"  {len(news)} berichten")
+        except (httpx.HTTPError, ValueError) as e:
+            _log(f"  politienieuws mislukt: {e}")
+    try:
+        _log("Misdrijven per buurt ophalen (CBS)...")
+        veiligheid = politie.fetch_veiligheid(client, cfg.gemeente)
+        (out / "veiligheid.json").write_text(json.dumps(veiligheid, ensure_ascii=False, indent=1))
+        _log(f"  {len(veiligheid['buurten'])} buurten, {len(veiligheid['perioden'])} maanden")
+    except (httpx.HTTPError, ValueError, KeyError) as e:
+        _log(f"  misdrijfcijfers mislukt: {e}")
+    return news
+
+
 def build(args: argparse.Namespace, cfg: Config) -> None:
     out = Path(cfg.out_dir) / _slug(cfg.gemeente)
     cache = Path(cfg.cache_dir) / _slug(cfg.gemeente)
@@ -98,10 +129,12 @@ def build(args: argparse.Namespace, cfg: Config) -> None:
             _summarize(Summarizer(client, cfg.ollama_url, args.model or cfg.model), items, cache / "summaries")
         _log("Geocoderen via PDOK...")
         _geocode(Geocoder(client, cfg.gemeente, cache / "geocode.json"), items)
+        out.mkdir(parents=True, exist_ok=True)
+        if not args.no_politie:
+            items += _politie(client, cfg, items, out)
 
     items.sort(key=lambda i: i.published, reverse=True)
     located = sum(1 for i in items if i.lat is not None)
-    out.mkdir(parents=True, exist_ok=True)
     feed = {
         "gemeente": cfg.gemeente,
         "generated_at": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
@@ -147,6 +180,7 @@ def main(argv: list[str] | None = None) -> None:
     b.add_argument("--limit", type=int, default=None, help="Maximaal aantal bekendmakingen")
     b.add_argument("--model", default=None, help=f"Ollama-model (standaard {cfg.model})")
     b.add_argument("--no-llm", action="store_true", help="Sla samenvatten over")
+    b.add_argument("--no-politie", action="store_true", help="Sla wijkagenten, politienieuws en misdrijfcijfers over")
     b.set_defaults(func=build)
 
     c = sub.add_parser("compare", help="Vergelijk samenvattingen van meerdere modellen")

@@ -48,16 +48,20 @@ export function DetailScreen({ item, profile, onBack }: { item: NearbyItem; prof
           {!!item.summary && (
             <View style={styles.card}>
               <T weight="bold" style={{ fontSize: 13, color: colors.ink }}>
-                In gewone taal
+                {item.category === 'politie' ? 'Kort' : 'In gewone taal'}
               </T>
               <T style={{ fontSize: 15, lineHeight: 22, color: '#374151' }}>{item.summary}</T>
-              <T style={{ fontSize: 12, color: colors.textMuted }}>Automatisch samengevat uit de officiële bekendmaking. De bekendmaking zelf is leidend.</T>
+              <T style={{ fontSize: 12, color: colors.textMuted }}>
+                {item.category === 'politie'
+                  ? 'Inleiding van het bericht op politie.nl.'
+                  : 'Automatisch samengevat uit de officiële bekendmaking. De bekendmaking zelf is leidend.'}
+              </T>
             </View>
           )}
 
           <Pressable accessibilityRole="link" onPress={() => Linking.openURL(item.url)} style={{ minHeight: 44, justifyContent: 'center' }}>
             <T weight="semibold" style={{ color: colors.ink, fontSize: 15, textDecorationLine: 'underline' }}>
-              Lees de officiële bekendmaking
+              {item.category === 'politie' ? 'Lees het politiebericht' : 'Lees de officiële bekendmaking'}
             </T>
           </Pressable>
         </View>
@@ -77,7 +81,7 @@ export function DetailScreen({ item, profile, onBack }: { item: NearbyItem; prof
       </Pressable>
 
       <Glass style={[styles.footer, { bottom: (insets.bottom || 12) + 4, left: 16 + insets.left, right: 16 + insets.right }]}>
-        <Button label="Lees en reageer" onPress={() => Linking.openURL(item.url)} style={{ flex: 1 }} />
+        <Button label={item.category === 'politie' ? 'Lees op politie.nl' : 'Lees en reageer'} onPress={() => Linking.openURL(item.url)} style={{ flex: 1 }} />
       </Glass>
     </View>
   );

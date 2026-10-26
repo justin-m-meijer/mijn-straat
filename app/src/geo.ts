@@ -1,4 +1,4 @@
-import type { Feed, NearbyItem, Profile } from './types';
+import type { Feed, GeoJSON, NearbyItem, Profile } from './types';
 
 const LOCATIESERVER = 'https://api.pdok.nl/bzk/locatieserver/search/v3_1/free';
 
@@ -56,14 +56,62 @@ function byDistanceThenDate(a: NearbyItem, b: NearbyItem): number {
  * Zoek postcode + huisnummer op via de PDOK Locatieserver.
  * Let op: deze vraag gaat rechtstreeks van de telefoon naar PDOK (Kadaster), niet naar onze server.
  */
-export async function lookupAddress(postcode: string, huisnummer: string): Promise<{ address: string; lat: number; lon: number } | null> {
+export async function lookupAddress(
+  postcode: string,
+  huisnummer: string,
+): Promise<{ address: string; lat: number; lon: number; buurtcode?: string } | null> {
   const q = `${postcode.replace(/\s+/g, '')} ${huisnummer.trim()}`;
-  const url = `${LOCATIESERVER}?q=${encodeURIComponent(q)}&fq=type:adres&rows=1&fl=weergavenaam,centroide_ll`;
+  const url = `${LOCATIESERVER}?q=${encodeURIComponent(q)}&fq=type:adres&rows=1&fl=weergavenaam,centroide_ll,buurtcode`;
   const resp = await fetch(url);
   if (!resp.ok) throw new Error(`PDOK ${resp.status}`);
   const json = await resp.json();
   const doc = json?.response?.docs?.[0];
   const m = /POINT\((-?[\d.]+) (-?[\d.]+)\)/.exec(doc?.centroide_ll ?? '');
   if (!doc || !m) return null;
-  return { address: doc.weergavenaam, lat: Number(m[2]), lon: Number(m[1]) };
+  return { address: doc.weergavenaam, lat: Number(m[2]), lon: Number(m[1]), buurtcode: doc.buurtcode ?? undefined };
+}
+
+/** Buurtcode bij een bestaand profiel van vóór de misdrijfcijfers (ook via PDOK, vanaf de telefoon). */
+export async function lookupBuurtcode(lat: number, lon: number): Promise<string | null> {
+  try {
+    const url = `${LOCATIESERVER.replace('/free', '/reverse')}?lat=${lat}&lon=${lon}&type=adres&rows=1&fl=buurtcode`;
+    const resp = await fetch(url);
+    if (!resp.ok) return null;
+    const json = await resp.json();
+    return json?.response?.docs?.[0]?.buurtcode ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** Ligt het punt in het GeoJSON-gebied? Ray casting; ringen na de eerste zijn gaten. */
+export function contains(geo: GeoJSON | null | undefined, lat: number, lon: number): boolean {
+  if (!geo) return false;
+  switch (geo.type) {
+    case 'FeatureCollection':
+      return geo.features.some((f) => contains(f, lat, lon));
+    case 'Feature':
+      return contains(geo.geometry, lat, lon);
+    case 'Polygon':
+      return inPolygon(geo.coordinates, lat, lon);
+    case 'MultiPolygon':
+      return geo.coordinates.some((p) => inPolygon(p, lat, lon));
+    default:
+      return false;
+  }
+}
+
+function inPolygon(rings: number[][][], lat: number, lon: number): boolean {
+  const [outer, ...holes] = rings;
+  return !!outer && inRing(outer, lat, lon) && !holes.some((h) => inRing(h, lat, lon));
+}
+
+function inRing(ring: number[][], lat: number, lon: number): boolean {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, yi] = ring[i];
+    const [xj, yj] = ring[j];
+    if (yi > lat !== yj > lat && lon < ((xj - xi) * (lat - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
 }

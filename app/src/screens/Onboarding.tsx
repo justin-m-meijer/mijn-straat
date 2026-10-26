@@ -7,7 +7,7 @@ import { categories, colors, fonts, type Category } from '../theme';
 import type { Profile } from '../types';
 import { Button, T, column, useSidePadding } from '../ui';
 
-const TOPICS: Category[] = ['vergunning', 'verkeer', 'evenement', 'raad', 'regels'];
+const TOPICS: Category[] = ['vergunning', 'verkeer', 'evenement', 'raad', 'regels', 'politie'];
 
 export function Onboarding({ initial, onDone }: { initial: Profile | null; onDone: (p: Profile) => void }) {
   const insets = useSafeAreaInsets();
