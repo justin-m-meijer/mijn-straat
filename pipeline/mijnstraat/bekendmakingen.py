@@ -47,6 +47,8 @@ def _parse_record(data: ET.Element) -> Item | None:
     title = first_text(data, "title")
     if not ident or not title:
         return None
+    if is_personal(title, [e.text or "" for e in find_all(data, "type")]):
+        return None
     published = first_text(data, "available", "issued", "date", "modified")[:10]
     url = first_text(data, "preferredUrl") or f"https://zoek.officielebekendmakingen.nl/{ident}.html"
     doc_type = first_text(data, "publicatienaam", "type")
@@ -62,6 +64,16 @@ def _parse_record(data: ET.Element) -> Item | None:
     )
     _apply_location_metadata(data, item)
     return item
+
+
+# BRP-bekendmakingen noemen privépersonen bij naam; die horen niet in een buurtfeed.
+_PERSONAL_TYPES = ("basisregistratie personen",)
+_PERSONAL_TITLES = ("vertrokken met onbekende bestemming", "uitschrijving", "ambtshalve inschrijving")
+
+
+def is_personal(title: str, types: list[str]) -> bool:
+    title = title.lower()
+    return any(t in ty.lower() for ty in types for t in _PERSONAL_TYPES) or any(t in title for t in _PERSONAL_TITLES)
 
 
 _POINT = re.compile(r"(-?\d+(?:\.\d+)?)[ ,]+(-?\d+(?:\.\d+)?)")

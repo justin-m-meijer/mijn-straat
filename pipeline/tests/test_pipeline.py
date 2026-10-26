@@ -33,6 +33,18 @@ def test_parse_records():
     assert third.url == "https://zoek.officielebekendmakingen.nl/gmb-2026-900003.html"
 
 
+@pytest.mark.parametrize(
+    "title,types,expected",
+    [
+        ("Vertrokken met onbekende bestemming van A.X. Zimmerman", ["uitschrijving basisregistratie personen"], True),
+        ("Gemeente Lingewaard - vertrokken met onbekende bestemming - A. Mohsend", ["andere vergunning"], True),
+        ("Omgevingsvergunning Dorpsstraat 1 Gendt", ["omgevingsvergunning"], False),
+    ],
+)
+def test_is_personal(title, types, expected):
+    assert bekendmakingen.is_personal(title, types) is expected
+
+
 def test_build_query():
     import datetime as dt
 
