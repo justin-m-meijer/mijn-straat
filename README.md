@@ -25,13 +25,16 @@ Het adres van de gebruiker blijft op de telefoon. De app haalt de hele gemeentef
 
 ```bash
 cd pipeline
-python3 -m venv .venv && source .venv/bin/activate
+python3.12 -m venv .venv && source .venv/bin/activate   # macOS-systeem-Python is 3.9: brew install python@3.12
 pip install -e '.[dev]'
-pytest                                  # 17 tests, zonder netwerk
+chflags nohidden .venv/lib/python3.*/site-packages/*.pth   # zie hieronder
+pytest                                  # 20 tests, zonder netwerk
 
 mijnstraat build --no-llm --limit 20    # snelle rooktest: ophalen + geocoderen
 mijnstraat build                        # volledige run, laatste 90 dagen, met samenvattingen
 ```
+
+In `~/Documents` zet macOS de `hidden`-vlag op nieuwe bestanden. Python 3.12+ slaat verborgen `.pth`-bestanden over, waardoor `mijnstraat` na `pip install -e` faalt met `ModuleNotFoundError: No module named 'mijnstraat'`. De `chflags`-regel hierboven lost dat op.
 
 Instellingen via omgevingsvariabelen:
 
