@@ -12,12 +12,20 @@ export function distanceMeters(lat1: number, lon1: number, lat2: number, lon2: n
   return 2 * R * Math.asin(Math.sqrt(a));
 }
 
+/** Keuzes voor de straal in meters; 0 betekent de hele gemeente. */
+export const RADII = [1000, 5000, 10000, 0];
+export const WHOLE_GEMEENTE = 0;
+
+export function formatRadius(r: number): string {
+  return r === WHOLE_GEMEENTE ? 'Hele gemeente' : formatDistance(r);
+}
+
 export function formatDistance(m: number): string {
   return m < 1000 ? `${Math.round(m / 10) * 10} m` : `${(m / 1000).toFixed(1).replace('.', ',')} km`;
 }
 
 /**
- * Berichten binnen de straal van de gebruiker, nieuwste eerst.
+ * Berichten binnen de straal van de gebruiker, dichtstbij eerst (bij gelijke afstand nieuwste eerst).
  * Berichten zonder locatie die voor de hele gemeente gelden (regels, raad) tellen mee.
  * Dit gebeurt op het toestel: het adres van de gebruiker verlaat de telefoon niet.
  */
@@ -28,8 +36,20 @@ export function nearby(feed: Feed, profile: Profile): NearbyItem[] {
       ...i,
       distance: i.lat != null && i.lon != null ? distanceMeters(profile.lat, profile.lon, i.lat, i.lon) : null,
     }))
-    .filter((i) => (i.distance == null ? i.category === 'regels' || i.category === 'raad' : i.distance <= profile.radius))
-    .sort((a, b) => b.published.localeCompare(a.published));
+    .filter((i) =>
+      i.distance == null
+        ? i.category === 'regels' || i.category === 'raad'
+        : profile.radius === WHOLE_GEMEENTE || i.distance <= profile.radius,
+    )
+    .sort(byDistanceThenDate);
+}
+
+// Berichten zonder locatie (voor de hele gemeente) komen na de berichten met een afstand.
+function byDistanceThenDate(a: NearbyItem, b: NearbyItem): number {
+  if (a.distance != null && b.distance != null && a.distance !== b.distance) return a.distance - b.distance;
+  if (a.distance == null && b.distance != null) return 1;
+  if (a.distance != null && b.distance == null) return -1;
+  return b.published.localeCompare(a.published);
 }
 
 /**

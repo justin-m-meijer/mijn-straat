@@ -106,6 +106,11 @@ function Root() {
             onRefresh={refresh}
             onOpen={setOpen}
             onEditProfile={() => setEditing(true)}
+            onRadiusChange={async (radius) => {
+              const p = { ...profile, radius };
+              setProfile(p);
+              await saveProfile(p);
+            }}
           />
         ) : (
           <MapScreen feed={feed} profile={profile} onOpen={setOpen} />

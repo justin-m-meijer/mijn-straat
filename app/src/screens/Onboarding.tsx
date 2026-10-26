@@ -2,12 +2,11 @@ import { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Switch, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { lookupAddress } from '../geo';
+import { RADII, formatRadius, lookupAddress } from '../geo';
 import { categories, colors, fonts, type Category } from '../theme';
 import type { Profile } from '../types';
 import { Button, T, column, useSidePadding } from '../ui';
 
-const RADII = [250, 500, 1000];
 const TOPICS: Category[] = ['vergunning', 'verkeer', 'evenement', 'raad', 'regels'];
 
 export function Onboarding({ initial, onDone }: { initial: Profile | null; onDone: (p: Profile) => void }) {
@@ -18,7 +17,7 @@ export function Onboarding({ initial, onDone }: { initial: Profile | null; onDon
   const [found, setFound] = useState<{ address: string; lat: number; lon: number } | null>(
     initial ? { address: initial.address, lat: initial.lat, lon: initial.lon } : null,
   );
-  const [radius, setRadius] = useState(initial?.radius ?? 500);
+  const [radius, setRadius] = useState(initial?.radius ?? 1000);
   const [topics, setTopics] = useState<Category[]>(initial?.topics ?? TOPICS);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -93,7 +92,7 @@ export function Onboarding({ initial, onDone }: { initial: Profile | null; onDon
         <T weight="bold" style={styles.label}>
           Hoe ver om je heen?
         </T>
-        <View style={{ flexDirection: 'row', gap: 8 }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
           {RADII.map((r) => {
             const on = r === radius;
             return (
@@ -105,7 +104,7 @@ export function Onboarding({ initial, onDone }: { initial: Profile | null; onDon
                 style={[styles.radius, on && { backgroundColor: colors.ink, borderColor: colors.ink }]}
               >
                 <T weight="bold" style={{ color: on ? colors.white : colors.text, fontSize: 15 }}>
-                  {r === 1000 ? '1 km' : `${r} m`}
+                  {formatRadius(r)}
                 </T>
               </Pressable>
             );
@@ -160,7 +159,7 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   found: { backgroundColor: colors.ivory, borderRadius: 12, padding: 12 },
-  radius: { flex: 1, height: 46, borderRadius: 12, borderWidth: 1, borderColor: colors.inputBorder, alignItems: 'center', justifyContent: 'center' },
+  radius: { flexGrow: 1, minWidth: 72, paddingHorizontal: 12, height: 46, borderRadius: 12, borderWidth: 1, borderColor: colors.inputBorder, alignItems: 'center', justifyContent: 'center' },
   topic: { flexDirection: 'row', alignItems: 'center', minHeight: 44 },
   privacy: { fontSize: 12, lineHeight: 18, color: colors.textMuted },
   byline: { textAlign: 'center', fontSize: 12, color: colors.textMuted },

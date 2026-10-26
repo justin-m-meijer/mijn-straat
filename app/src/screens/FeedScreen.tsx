@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { formatDistance, nearby } from '../geo';
+import { RADII, formatDistance, formatRadius, nearby } from '../geo';
 import { categories, colors, type Category } from '../theme';
 import type { Feed, NearbyItem, Profile } from '../types';
 import { CategoryDot, T, column, formatDate, useSidePadding } from '../ui';
@@ -16,6 +16,7 @@ export function FeedScreen({
   onRefresh,
   onOpen,
   onEditProfile,
+  onRadiusChange,
 }: {
   feed: Feed;
   profile: Profile;
@@ -23,6 +24,7 @@ export function FeedScreen({
   onRefresh: () => void;
   onOpen: (item: NearbyItem) => void;
   onEditProfile: () => void;
+  onRadiusChange: (radius: number) => void;
 }) {
   const insets = useSafeAreaInsets();
   const side = useSidePadding();
@@ -40,9 +42,27 @@ export function FeedScreen({
             Mijn Straat
           </T>
           <T style={{ color: '#E5EEEE', fontSize: 13 }}>
-            {profile.address} · {formatDistance(profile.radius)}
+            {profile.address}
           </T>
         </Pressable>
+        <View style={styles.segments} accessibilityRole="radiogroup">
+          {RADII.map((r) => {
+            const on = r === profile.radius;
+            return (
+              <Pressable
+                key={r}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: on }}
+                onPress={() => onRadiusChange(r)}
+                style={[styles.segment, on && { backgroundColor: colors.white }]}
+              >
+                <T weight={on ? 'bold' : 'semibold'} style={{ color: on ? colors.ink : colors.white, fontSize: 13 }} numberOfLines={1}>
+                  {formatRadius(r)}
+                </T>
+              </Pressable>
+            );
+          })}
+        </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingRight: 16 }}>
           {filters.map((f) => {
             const on = f === filter;
@@ -76,7 +96,7 @@ export function FeedScreen({
         contentContainerStyle={[column, side, { paddingTop: 16, gap: 12, paddingBottom: 24 }]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.ink} />}
         ListEmptyComponent={
-          <T style={{ textAlign: 'center', color: colors.textMuted, marginTop: 40 }}>Geen berichten binnen {formatDistance(profile.radius)}.</T>
+          <T style={{ textAlign: 'center', color: colors.textMuted, marginTop: 40 }}>{profile.radius ? `Geen berichten binnen ${formatDistance(profile.radius)}.` : 'Geen berichten in de gemeente.'}</T>
         }
         renderItem={({ item }) => (
           <Pressable accessibilityRole="button" onPress={() => onOpen(item)} style={({ pressed }) => [styles.card, pressed && { opacity: 0.85 }]}>
@@ -108,6 +128,8 @@ export function FeedScreen({
 const styles = StyleSheet.create({
   header: { backgroundColor: colors.ink, paddingBottom: 16 },
   chip: { height: 36, paddingHorizontal: 14, borderRadius: 18, borderWidth: 1, borderColor: 'rgba(255,255,255,0.4)', justifyContent: 'center' },
+  segments: { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 12, padding: 3, gap: 3 },
+  segment: { flex: 1, minHeight: 34, borderRadius: 9, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
   sample: { backgroundColor: '#EFE8D6', paddingHorizontal: 16, paddingVertical: 8 },
   card: { backgroundColor: colors.white, borderRadius: 16, padding: 14, flexDirection: 'row', gap: 12 },
 });
