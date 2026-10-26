@@ -12,14 +12,14 @@ import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, BackHandler, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { loadFeed, loadProfile, saveProfile } from './src/data';
+import { loadExtras, loadFeed, loadProfile, saveProfile } from './src/data';
 import { DetailScreen } from './src/screens/DetailScreen';
 import { FeedScreen } from './src/screens/FeedScreen';
 import { MapScreen } from './src/screens/MapScreen';
 import { Onboarding } from './src/screens/Onboarding';
 import { colors } from './src/theme';
-import type { Feed, NearbyItem, Profile } from './src/types';
-import { RADII } from './src/geo';
+import type { Extras, Feed, NearbyItem, Profile } from './src/types';
+import { RADII, lookupBuurtcode } from './src/geo';
 import { Glass, GlassGroup, RadiusControl, T, inkMuted, useSideStrip } from './src/ui';
 
 type Tab = 'feed' | 'kaart';
@@ -37,6 +37,7 @@ function Root() {
   const [profile, setProfile] = useState<Profile | null | undefined>(undefined);
   const [editing, setEditing] = useState(false);
   const [feed, setFeed] = useState<Feed | null>(null);
+  const [extras, setExtras] = useState<Extras>({ wijkagenten: [], veiligheid: null });
   const [refreshing, setRefreshing] = useState(false);
   const [tab, setTab] = useState<Tab>('feed');
   const [open, setOpen] = useState<NearbyItem | null>(null);
@@ -45,7 +46,19 @@ function Root() {
   useEffect(() => {
     loadProfile().then(setProfile);
     loadFeed().then(setFeed);
+    loadExtras().then(setExtras);
   }, []);
+
+  // Profielen van vóór de misdrijfcijfers hebben nog geen buurtcode: één keer opvragen bij PDOK.
+  useEffect(() => {
+    if (!profile || profile.buurtcode) return;
+    lookupBuurtcode(profile.lat, profile.lon).then(async (buurtcode) => {
+      if (!buurtcode) return;
+      const p = { ...profile, buurtcode };
+      setProfile(p);
+      await saveProfile(p);
+    });
+  }, [profile]);
 
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
@@ -60,7 +73,9 @@ function Root() {
 
   const refresh = useCallback(async () => {
     setRefreshing(true);
-    setFeed(await loadFeed());
+    const [f, x] = await Promise.all([loadFeed(), loadExtras()]);
+    setFeed(f);
+    setExtras(x);
     setRefreshing(false);
   }, []);
 
@@ -117,6 +132,7 @@ function Root() {
             onOpen={setOpen}
             onEditProfile={() => setEditing(true)}
             onRadiusChange={changeRadius}
+            extras={extras}
           />
         ) : (
           <MapScreen feed={feed} profile={profile} onOpen={setOpen} />

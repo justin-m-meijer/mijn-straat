@@ -1,0 +1,17 @@
+{
+  "wijkagenten": [
+    {
+      "uid": "wa-1",
+      "naam": "Marco Voorbeeld",
+      "functie": "Wijkagent Doornenburg en Gendt",
+      "werkgebied": "<p>Doornenburg en Gendt</p>",
+      "telefoon": "0900-8844",
+      "facebook": "https://www.facebook.com/politielingewaard",
+      "url": "https://www.politie.nl/mijn-buurt/wijkagenten/wa-1",
+      "werkgebiedpolygoon": {"type": "FeatureCollection", "features": [{"type": "Feature", "geometry": {"type": "Polygon", "coordinates": [[[5.95, 51.86], [6.02, 51.86], [6.02, 51.90], [5.95, 51.90], [5.95, 51.86]]]}, "properties": {}}]},
+      "locaties": [{"latitude": 51.876, "longitude": 5.976}]
+    },
+    {"uid": "wa-zonder-gebied", "naam": "Zonder Polygoon"}
+  ],
+  "iterator": {"last": true, "offset": 0}
+}

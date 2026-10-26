@@ -4,7 +4,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { RADII, formatDistance, nearby } from '../geo';
 import { categories, colors, type Category } from '../theme';
-import type { Feed, NearbyItem, Profile } from '../types';
+import type { Extras, Feed, NearbyItem, Profile } from '../types';
+import { BuurtCard } from './BuurtCard';
 import { CategoryDot, FLOATING_TAB_SPACE, Glass, RadiusControl, T, column, formatDate, useSidePadding, useSideStrip } from '../ui';
 
 type Filter = 'alles' | Category;
@@ -20,6 +21,7 @@ export function FeedScreen({
   onOpen,
   onEditProfile,
   onRadiusChange,
+  extras,
 }: {
   feed: Feed;
   profile: Profile;
@@ -28,6 +30,7 @@ export function FeedScreen({
   onOpen: (item: NearbyItem) => void;
   onEditProfile: () => void;
   onRadiusChange: (radius: number) => void;
+  extras: Extras;
 }) {
   const insets = useSafeAreaInsets();
   const strip = useSideStrip(); // > 0: straal en navigatie staan in de glazen zijrail
@@ -52,6 +55,7 @@ export function FeedScreen({
         </Pressable>
         {/* naast de categorie 'Alles' zou een tweede 'Alles' verwarren; in de smalle zijrail past alleen 'Alles' */}
         {!strip && <RadiusControl radii={RADII} value={profile.radius} onChange={onRadiusChange} wholeLabel="Gemeente" />}
+        {filter === 'alles' && <BuurtCard extras={extras} profile={profile} />}
         {feed.sample && (
           <View style={styles.sample}>
             <T style={{ fontSize: 12, color: '#6B5426' }}>Voorbeelddata. Zet EXPO_PUBLIC_FEED_URL om de echte feed van je Mac te laden.</T>

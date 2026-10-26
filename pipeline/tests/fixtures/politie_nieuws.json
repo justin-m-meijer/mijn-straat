@@ -1,0 +1,23 @@
+{
+  "nieuwsberichten": [
+    {
+      "uid": "n-1",
+      "titel": "Getuigen gezocht van inbraak in Gendt",
+      "introductie": "<p>De politie zoekt getuigen van een inbraak in een woning.</p>",
+      "publicatiedatum": "PUBLISHED_RECENT 10:15:00",
+      "url": "https://www.politie.nl/nieuws/n-1",
+      "gebied": "Lingewaard",
+      "locaties": [{"latitude": 52.37, "longitude": 4.89}, {"latitude": 51.877, "longitude": 5.975}]
+    },
+    {
+      "uid": "n-2",
+      "titel": "Oud bericht",
+      "introductie": "Te oud.",
+      "publicatiedatum": "2020-01-01 09:00:00",
+      "url": "https://www.politie.nl/nieuws/n-2",
+      "gebied": "Arnhem",
+      "locaties": []
+    }
+  ],
+  "iterator": {"last": true, "offset": 0}
+}

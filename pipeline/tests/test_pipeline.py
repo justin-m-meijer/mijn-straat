@@ -167,7 +167,7 @@ def test_build_end_to_end(tmp_path, monkeypatch):
     monkeypatch.setenv("MIJNSTRAAT_CACHE", str(tmp_path / "cache"))
     monkeypatch.setattr(cli, "Config", lambda: _cfg(tmp_path))
 
-    cli.main(["build"])
+    cli.main(["build", "--no-politie"])
 
     feed = json.loads((tmp_path / "public" / "lingewaard" / "feed.json").read_text())
     assert feed["stats"] == {"items": 3, "located": 2}

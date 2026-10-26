@@ -21,7 +21,7 @@ export const fonts = {
   extrabold: 'Figtree_800ExtraBold',
 };
 
-export type Category = 'vergunning' | 'verkeer' | 'raad' | 'evenement' | 'regels' | 'overig';
+export type Category = 'vergunning' | 'verkeer' | 'raad' | 'evenement' | 'regels' | 'politie' | 'overig';
 
 export const categories: Record<Category, { label: string; bg: string; fg: string; letter: string }> = {
   vergunning: { label: 'Vergunning', bg: '#EFE8D6', fg: '#6B5426', letter: 'V' },
@@ -29,5 +29,6 @@ export const categories: Record<Category, { label: string; bg: string; fg: strin
   raad: { label: 'Gemeenteraad', bg: '#DFE7EC', fg: '#2F4F63', letter: 'R' },
   evenement: { label: 'Evenement', bg: '#DCEBEA', fg: '#2D5E5B', letter: 'E' },
   regels: { label: 'Regels', bg: '#ECE9F2', fg: '#4A4363', letter: 'G' },
+  politie: { label: 'Politie', bg: '#E1E6EF', fg: '#283B63', letter: 'P' },
   overig: { label: 'Overig', bg: '#EEECE5', fg: '#4B5563', letter: 'O' },
 };
