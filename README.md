@@ -18,23 +18,23 @@ Het adres van de gebruiker blijft op de telefoon. De app haalt de hele gemeentef
 ## Vereisten
 
 - macOS met Python 3.11 of nieuwer en Node 20 of nieuwer
-- [Ollama](https://ollama.com) met minstens één model, bijvoorbeeld `ollama pull qwen3:30b-a3b`
+- [Ollama](https://ollama.com) met minstens één model, bijvoorbeeld `ollama pull gemma3:12b` (8 GB, standaard)
 - Expo Go op je telefoon, op hetzelfde wifi-netwerk als je Mac
 
 ## 1. Pijplijn
 
 ```bash
 cd pipeline
-python3.12 -m venv .venv && source .venv/bin/activate   # macOS-systeem-Python is 3.9: brew install python@3.12
+python3.12 -m venv .venv.nosync && ln -s .venv.nosync .venv   # macOS-systeem-Python is 3.9: brew install python@3.12
+source .venv/bin/activate
 pip install -e '.[dev]'
-chflags nohidden .venv/lib/python3.*/site-packages/*.pth   # zie hieronder
 pytest                                  # 20 tests, zonder netwerk
 
 mijnstraat build --no-llm --limit 20    # snelle rooktest: ophalen + geocoderen
 mijnstraat build                        # volledige run, laatste 90 dagen, met samenvattingen
 ```
 
-In `~/Documents` zet macOS de `hidden`-vlag op nieuwe bestanden. Python 3.12+ slaat verborgen `.pth`-bestanden over, waardoor `mijnstraat` na `pip install -e` faalt met `ModuleNotFoundError: No module named 'mijnstraat'`. De `chflags`-regel hierboven lost dat op.
+Waarom `.venv.nosync`: als `~/Documents` via iCloud synchroniseert, zet macOS de `hidden`-vlag op bestanden in `.venv`. Python 3.12+ slaat verborgen `.pth`-bestanden over, waardoor `mijnstraat` faalt met `ModuleNotFoundError: No module named 'mijnstraat'`. `chflags nohidden` helpt maar even, want de vlag komt terug. iCloud slaat mappen die op `.nosync` eindigen over.
 
 Instellingen via omgevingsvariabelen:
 
@@ -42,7 +42,7 @@ Instellingen via omgevingsvariabelen:
 | --- | --- | --- |
 | `MIJNSTRAAT_GEMEENTE` | `Lingewaard` | Naam zoals in `dt.creator` van de bekendmakingen |
 | `MIJNSTRAAT_DAYS` | `90` | Hoe ver terug |
-| `MIJNSTRAAT_MODEL` | `qwen3:30b-a3b` | Ollama-model |
+| `MIJNSTRAAT_MODEL` | `gemma3:12b` | Ollama-model |
 | `OLLAMA_URL` | `http://localhost:11434` | Ollama-adres |
 
 Samenvattingen, teksten en geocodes worden gecachet in `data/cache/`. Een nachtelijke run doet dus alleen nieuwe stukken.
@@ -50,8 +50,8 @@ Samenvattingen, teksten en geocodes worden gecachet in `data/cache/`. Een nachte
 ### Modellen vergelijken
 
 ```bash
-ollama pull gemma3:27b && ollama pull mistral-small3.2:24b
-mijnstraat compare --n 20 --models qwen3:30b-a3b,gemma3:27b,mistral-small3.2:24b
+ollama pull qwen3:8b && ollama pull qwen3:30b-a3b
+mijnstraat compare --n 20 --models gemma3:12b,qwen3:8b,qwen3:30b-a3b
 open ../data/vergelijking-lingewaard.md
 ```
 

@@ -50,7 +50,7 @@ def _load_texts(client: httpx.Client, items: list[Item], cache: Path) -> None:
 def _summarize(summarizer: Summarizer, items: list[Item], cache: Path) -> None:
     cache.mkdir(parents=True, exist_ok=True)
     for i, item in enumerate(items, 1):
-        path = cache / f"{item.id.replace(':', '_')}.{summarizer.model.replace(':', '_').replace('/', '_')}.json"
+        path = cache / f"{item.id.replace(':', '_')}.{summarizer.cache_key}.json"
         if path.exists():
             result = json.loads(path.read_text())
         else:
@@ -150,7 +150,7 @@ def main(argv: list[str] | None = None) -> None:
     b.set_defaults(func=build)
 
     c = sub.add_parser("compare", help="Vergelijk samenvattingen van meerdere modellen")
-    c.add_argument("--models", default="qwen3:30b-a3b,gemma3:27b,mistral-small3.2:24b")
+    c.add_argument("--models", default="gemma3:12b,qwen3:8b,qwen3:30b-a3b")
     c.add_argument("--n", type=int, default=20)
     c.set_defaults(func=compare)
 
