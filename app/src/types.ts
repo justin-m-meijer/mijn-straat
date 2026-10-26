@@ -29,7 +29,7 @@ export type Profile = {
   address: string; // weergavenaam van PDOK
   lat: number;
   lon: number;
-  radius: number; // meters
+  radius: number; // meters, 0 = hele gemeente
   topics: Category[];
 };
 
