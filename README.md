@@ -81,12 +81,15 @@ Scan de QR-code met Expo Go. Zonder `EXPO_PUBLIC_FEED_URL` toont de app duidelij
 
 ## 4. Elke nacht verversen
 
-Pas het pad aan in `scripts/nl.jumpstartmedia.mijnstraat.plist`. Daarna:
+`scripts/install-nightly.sh` zet een launchd-job klaar die `scripts/nightly.sh` elke nacht om 03:00 draait, met het pad van deze map erin:
 
 ```bash
-cp scripts/nl.jumpstartmedia.mijnstraat.plist ~/Library/LaunchAgents/
-launchctl load ~/Library/LaunchAgents/nl.jumpstartmedia.mijnstraat.plist
+scripts/install-nightly.sh                # installeren of bijwerken
+launchctl kickstart gui/$(id -u)/nl.jumpstartmedia.mijnstraat   # nu één keer draaien
+scripts/install-nightly.sh --uninstall    # weer verwijderen
 ```
+
+Elke run schrijft naar `data/nightly.log` (met tijdstempel per run). Draait Ollama niet, dan start de run hem zelf. De Mac moet om 03:00 wakker zijn; slaapt hij, dan draait launchd de job pas bij het ontwaken.
 
 ## Nog te verifiëren bij de eerste echte run
 
