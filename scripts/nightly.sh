@@ -26,6 +26,10 @@ status=0
 .venv/bin/mijnstraat build "$@" >> "$LOG" 2>&1 || status=$?
 if [ "$status" -eq 0 ]; then
   log "Klaar"
+  # Alleen als de job met --publish is geïnstalleerd: publieke kopie naar GitHub Pages.
+  if [ "${MIJNSTRAAT_PUBLISH:-0}" = "1" ]; then
+    if "$ROOT/scripts/publish.sh" >> "$LOG" 2>&1; then log "Gepubliceerd"; else status=$?; log "Publiceren mislukt (exitcode $status)"; fi
+  fi
 else
   log "Mislukt (exitcode $status)"
 fi

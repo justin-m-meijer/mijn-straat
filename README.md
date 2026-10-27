@@ -91,6 +91,23 @@ scripts/install-nightly.sh --uninstall    # weer verwijderen
 
 Elke run schrijft naar `data/nightly.log` (met tijdstempel per run). Draait Ollama niet, dan start de run hem zelf. De Mac moet om 03:00 wakker zijn; slaapt hij, dan draait launchd de job pas bij het ontwaken.
 
+## 5. Online zetten (GitHub Pages)
+
+`scripts/publish.sh` maakt een publieke kopie van `data/public` en zet die als één verse commit op de branch `gh-pages`:
+
+```bash
+scripts/publish.sh                        # handmatig publiceren
+scripts/install-nightly.sh --publish      # nachtjob die na elke run ook publiceert
+```
+
+De feed staat dan op `https://justin-m-meijer.github.io/mijn-straat/lingewaard/feed.json`. Alleen open data gaat online: bekendmakingen en CBS-cijfers. Wijkagenten en politienieuws (api.politie.nl, licentie onduidelijk) blijven op je thuisnetwerk.
+
+In `app/.env` kun je meerdere feeds opgeven, gescheiden door komma's. De app probeert ze op volgorde, dus thuis de volledige feed van je Mac en onderweg de online feed:
+
+```
+EXPO_PUBLIC_FEED_URL=http://192.168.x.x:8787/lingewaard/feed.json,https://justin-m-meijer.github.io/mijn-straat/lingewaard/feed.json
+```
+
 ## Nog te verifiëren bij de eerste echte run
 
 - De CQL-velden van de SRU-zoekservice (`dt.creator`, `dt.available`). Komen er 0 resultaten terug, controleer dan de [SRU-handleiding](https://data.overheid.nl/dataset/officiele-bekendmakingen).

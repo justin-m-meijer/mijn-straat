@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Installeer (of verwijder met --uninstall) de launchd-job die nightly.sh elke nacht om 03:00 draait.
+# Met --publish zet de job na elke geslaagde run de publieke feed op GitHub Pages (scripts/publish.sh).
 set -euo pipefail
 
 LABEL="nl.jumpstartmedia.mijnstraat"
@@ -16,7 +17,10 @@ if [ "${1:-}" = "--uninstall" ]; then
   exit 0
 fi
 
-chmod +x "$ROOT/scripts/nightly.sh"
+PUBLISH=0
+[ "${1:-}" = "--publish" ] && PUBLISH=1
+
+chmod +x "$ROOT/scripts/nightly.sh" "$ROOT/scripts/publish.sh"
 mkdir -p "$ROOT/data" "$(dirname "$PLIST")"
 cat > "$PLIST" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
@@ -27,6 +31,8 @@ cat > "$PLIST" <<EOF
   <key>ProgramArguments</key>
   <array><string>$ROOT/scripts/nightly.sh</string></array>
   <key>WorkingDirectory</key><string>$ROOT</string>
+  <key>EnvironmentVariables</key>
+  <dict><key>MIJNSTRAAT_PUBLISH</key><string>$PUBLISH</string></dict>
   <key>StartCalendarInterval</key>
   <dict><key>Hour</key><integer>3</integer><key>Minute</key><integer>0</integer></dict>
   <key>StandardOutPath</key><string>$ROOT/data/nightly.out.log</string>
@@ -36,5 +42,5 @@ cat > "$PLIST" <<EOF
 EOF
 plutil -lint "$PLIST" >/dev/null
 launchctl bootstrap "$DOMAIN" "$PLIST"
-echo "Geïnstalleerd: $PLIST (elke nacht om 03:00)"
+echo "Geïnstalleerd: $PLIST (elke nacht om 03:00$([ "$PUBLISH" = 1 ] && echo ', daarna publiceren naar GitHub Pages'))"
 echo "Nu één keer draaien: launchctl kickstart $DOMAIN/$LABEL"

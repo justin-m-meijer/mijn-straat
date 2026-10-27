@@ -10,7 +10,7 @@ from pathlib import Path
 
 import httpx
 
-from . import bekendmakingen, politie
+from . import bekendmakingen, politie, publish
 from .categorize import categorize
 from .config import Config
 from .geocode import Geocoder, guess_address
@@ -171,6 +171,11 @@ def compare(args: argparse.Namespace, cfg: Config) -> None:
     _log(f"Vergelijking geschreven naar {path}")
 
 
+def publish_cmd(args: argparse.Namespace, cfg: Config) -> None:
+    written = publish.prepare(Path(cfg.out_dir), Path(args.dest))
+    _log(f"Publieke kopie: {len(written)} bestanden -> {args.dest} (zonder politie-API)")
+
+
 def main(argv: list[str] | None = None) -> None:
     cfg = Config()
     parser = argparse.ArgumentParser(prog="mijnstraat")
@@ -187,6 +192,10 @@ def main(argv: list[str] | None = None) -> None:
     c.add_argument("--models", default="gemma3:12b,qwen3:8b,qwen3:30b-a3b")
     c.add_argument("--n", type=int, default=20)
     c.set_defaults(func=compare)
+
+    p = sub.add_parser("publish", help="Maak de publieke kopie voor GitHub Pages (zonder politie-API)")
+    p.add_argument("--dest", required=True, help="Doelmap")
+    p.set_defaults(func=publish_cmd)
 
     args = parser.parse_args(argv)
     args.func(args, cfg)
