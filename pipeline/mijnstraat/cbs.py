@@ -37,8 +37,9 @@ BUURT_ECONOMIE = {
     "participatie": "Nettoarbeidsparticipatie",
     "vestigingen": "BedrijfsvestigingenTotaal",
 }
-# korte naam -> begin van de kolomnaam in 80794ned
-UITKERING_SOORTEN = {"ww": "WW", "bijstand": "Bijstand", "ao": "Arbeidsongeschiktheid"}
+# korte naam -> kolomnaam zonder volgnummer in 80794ned. Let op: er zijn twee bijstandskolommen;
+# 'BijstandGerelateerd...' telt ook IOAW/IOAZ mee, wij nemen de gewone bijstand tot de AOW-leeftijd.
+UITKERING_SOORTEN = {"ww": "Werkloosheid", "bijstand": "BijstandTotDeAOWLeeftijd", "ao": "ArbeidsongeschiktheidTotaal"}
 
 _SUFFIX = re.compile(r"^(.*)_\d+$")
 
@@ -62,11 +63,8 @@ def _num(value: Any) -> float | None:
         return None
 
 
-def _value(row: dict, cols: dict[str, str], name: str, prefix: bool = False) -> float | None:
-    if prefix:
-        key = next((k for base, k in cols.items() if base.startswith(name)), None)
-    else:
-        key = cols.get(name)
+def _value(row: dict, cols: dict[str, str], name: str) -> float | None:
+    key = cols.get(name)
     return _num(row.get(key)) if key else None
 
 
@@ -119,7 +117,7 @@ def build_uitkeringen(rs: list[dict], last: int = 24) -> dict:
         if "MM" not in period:
             continue
         cols = measures(r)
-        values = {short: _value(r, cols, prefix, prefix=True) for short, prefix in UITKERING_SOORTEN.items()}
+        values = {short: _value(r, cols, name) for short, name in UITKERING_SOORTEN.items()}
         if any(v is not None for v in values.values()):
             by_period.setdefault(period, values)
     keys = sorted(by_period)[-last:]
@@ -209,7 +207,7 @@ def fetch_cijfers(client: httpx.Client, gemeente: str, log=lambda msg: None) -> 
     def index() -> dict:
         rs = rows(client, PRIJSINDEX_PROVINCIE, f"startswith(RegioS,'{r['pv']}')")
         prijs = _period_series(rs, lambda x: _value(x, measures(x), "GemiddeldeVerkoopprijs"), "KW", 12)
-        idx = _period_series(rs, lambda x: _value(x, measures(x), "PrijsindexBestaandeKoopwoningen"), "KW", 12)
+        idx = _period_series(rs, lambda x: _value(x, measures(x), "PrijsindexVerkoopprijzen"), "KW", 12)
         return {"perioden": idx["perioden"], "index": idx["waarden"], "prijs": prijs["waarden"]}
 
     def uitkeringen() -> dict:

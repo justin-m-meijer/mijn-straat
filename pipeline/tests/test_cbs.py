@@ -45,11 +45,21 @@ def test_kerncijfers_across_years_with_different_column_numbers():
     assert out["wonen"]["prijsindex"]["regio"] == "Gelderland"
 
 
+def _uitkering(period, ww, bijstand, ao):
+    return {
+        "ID": 1, "RegioS": "GM1705", "Perioden": period,
+        "UitkeringsontvangersTotaal_1": 13420, "Werkloosheid_4": ww,
+        "BijstandGerelateerdTotAOWLeeftijd_5": 620, "BijstandGerelateerdVanafAOWLeeftijd_6": 70,
+        "BijstandTotDeAOWLeeftijd_7": bijstand, "ArbeidsongeschiktheidTotaal_8": ao, "WAOUitkering_9": 260,
+    }
+
+
 def test_uitkeringen_share_periods_and_skip_years():
     rows = [
-        {"RegioS": "GM1705", "Perioden": "2026MM03", "WWUitkering_1": 400, "BijstandTotAOWLeeftijd_2": 575, "Arbeidsongeschiktheid_3": 1890},
-        {"RegioS": "GM1705", "Perioden": "2026MM04", "WWUitkering_1": 410, "BijstandTotAOWLeeftijd_2": None, "Arbeidsongeschiktheid_3": 1900},
-        {"RegioS": "GM1705", "Perioden": "2025JJ00", "WWUitkering_1": 9999, "BijstandTotAOWLeeftijd_2": 1, "Arbeidsongeschiktheid_3": 1},
+        # Echte kolommen van 80794ned; de 'BijstandGerelateerd'-kolom komt eerst en moet worden overgeslagen.
+        _uitkering("2026MM03", ww=400, bijstand=575, ao=1890),
+        _uitkering("2026MM04", ww=410, bijstand=None, ao=1900),
+        _uitkering("2025JJ00", ww=9999, bijstand=1, ao=1),
     ]
     out = cbs.build_uitkeringen(rows)
     assert out == {"perioden": ["2026MM03", "2026MM04"], "ww": [400, 410], "bijstand": [575, None], "ao": [1890, 1900]}
@@ -72,8 +82,8 @@ def test_fetch_cijfers_end_to_end_and_partial_outage():
             return httpx.Response(200, json={"value": rows})
         if "/85792NED/" in url:
             rows = [
-                {"RegioS": "PV25  ", "Perioden": "2026KW03", "PrijsindexBestaandeKoopwoningen_1": 166.2, "GemiddeldeVerkoopprijs_7": 510080},
-                {"RegioS": "PV25  ", "Perioden": "2026JJ00", "PrijsindexBestaandeKoopwoningen_1": 160.0, "GemiddeldeVerkoopprijs_7": 1},
+                {"RegioS": "PV25  ", "Perioden": "2026KW03", "PrijsindexVerkoopprijzen_1": 166.2, "GemiddeldeVerkoopprijs_7": 510080},
+                {"RegioS": "PV25  ", "Perioden": "2026JJ00", "PrijsindexVerkoopprijzen_1": 160.0, "GemiddeldeVerkoopprijs_7": 1},
             ]
             return httpx.Response(200, json={"value": rows})
         if "/81575NED/" in url:
