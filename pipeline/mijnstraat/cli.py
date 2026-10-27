@@ -10,7 +10,7 @@ from pathlib import Path
 
 import httpx
 
-from . import bekendmakingen, politie, publish
+from . import bekendmakingen, cbs, politie, publish
 from .categorize import categorize
 from .config import Config
 from .geocode import Geocoder, guess_address
@@ -113,6 +113,17 @@ def _politie(client: httpx.Client, cfg: Config, items: list[Item], out: Path) ->
     return news
 
 
+def _cijfers(client: httpx.Client, cfg: Config, out: Path) -> None:
+    """Wonen en economie (CBS). Ook hier: een storing houdt de feed niet tegen."""
+    try:
+        _log("Wonen en economie ophalen (CBS)...")
+        cijfers = cbs.fetch_cijfers(client, cfg.gemeente, log=_log)
+        (out / "cijfers.json").write_text(json.dumps(cijfers, ensure_ascii=False, indent=1))
+        _log(f"  {len(cijfers['wonen']['buurten'])} buurten, jaren {', '.join(cijfers['wonen']['jaren'])}")
+    except (httpx.HTTPError, ValueError, KeyError) as e:
+        _log(f"  wonen en economie mislukt: {e}")
+
+
 def build(args: argparse.Namespace, cfg: Config) -> None:
     out = Path(cfg.out_dir) / _slug(cfg.gemeente)
     cache = Path(cfg.cache_dir) / _slug(cfg.gemeente)
@@ -132,6 +143,8 @@ def build(args: argparse.Namespace, cfg: Config) -> None:
         out.mkdir(parents=True, exist_ok=True)
         if not args.no_politie:
             items += _politie(client, cfg, items, out)
+        if not args.no_cijfers:
+            _cijfers(client, cfg, out)
 
     items.sort(key=lambda i: i.published, reverse=True)
     located = sum(1 for i in items if i.lat is not None)
@@ -186,6 +199,7 @@ def main(argv: list[str] | None = None) -> None:
     b.add_argument("--model", default=None, help=f"Ollama-model (standaard {cfg.model})")
     b.add_argument("--no-llm", action="store_true", help="Sla samenvatten over")
     b.add_argument("--no-politie", action="store_true", help="Sla wijkagenten, politienieuws en misdrijfcijfers over")
+    b.add_argument("--no-cijfers", action="store_true", help="Sla wonen en economie (CBS) over")
     b.set_defaults(func=build)
 
     c = sub.add_parser("compare", help="Vergelijk samenvattingen van meerdere modellen")

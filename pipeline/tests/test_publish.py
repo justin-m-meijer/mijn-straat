@@ -17,6 +17,7 @@ def _write_source(root):
     }
     (g / "feed.json").write_text(json.dumps(feed))
     (g / "veiligheid.json").write_text('{"bron": "© Politie, via CBS"}')
+    (g / "cijfers.json").write_text('{"bron": "CBS, CC BY 4.0"}')
     (g / "wijkagenten.json").write_text('{"wijkagenten": [{"naam": "X"}]}')
     return g
 
@@ -28,10 +29,10 @@ def test_prepare_drops_police_api_data(tmp_path):
     feed = json.loads((out / "feed.json").read_text())
     assert [i["id"] for i in feed["items"]] == ["bm:1", "bm:2"]
     assert feed["stats"] == {"items": 2, "located": 1}
-    assert (out / "veiligheid.json").exists()
+    assert (out / "veiligheid.json").exists() and (out / "cijfers.json").exists()
     assert not (out / "wijkagenten.json").exists()
     assert (tmp_path / "site" / ".nojekyll").exists()
-    assert len(written) == 2
+    assert len(written) == 3
 
 
 def test_publish_command(tmp_path, monkeypatch):

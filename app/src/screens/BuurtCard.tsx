@@ -4,7 +4,7 @@ import { Linking, Pressable, StyleSheet, View } from 'react-native';
 import { contains } from '../geo';
 import { colors } from '../theme';
 import type { Extras, Profile } from '../types';
-import { T, column, inkMuted } from '../ui';
+import { T, column, inkMuted, periodLabel } from '../ui';
 
 const LABELS: Record<string, string> = {
   totaal: 'Alle misdrijven',
@@ -14,13 +14,6 @@ const LABELS: Record<string, string> = {
   vernieling: 'Vernieling',
   mishandeling: 'Mishandeling',
 };
-
-const MONTHS = ['jan', 'feb', 'mrt', 'apr', 'mei', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
-
-function monthLabel(period: string): string {
-  const m = /^(\d{4})MM(\d{2})$/.exec(period);
-  return m ? `${MONTHS[Number(m[2]) - 1]} ${m[1]}` : period;
-}
 
 function average(values: (number | null)[]): number | null {
   const nums = values.filter((v): v is number => v != null);
@@ -79,7 +72,7 @@ export function BuurtCard({ extras, profile }: { extras: Extras; profile: Profil
         <View style={{ gap: 8 }}>
           <View style={styles.divider} />
           <T style={{ fontSize: 14, lineHeight: 20, color: '#374151' }}>
-            In {monthLabel(v.perioden[v.perioden.length - 1])} {last === 1 ? 'is 1 misdrijf' : `zijn ${last} misdrijven`} geregistreerd in je buurt
+            In {periodLabel(v.perioden[v.perioden.length - 1])} {last === 1 ? 'is 1 misdrijf' : `zijn ${last} misdrijven`} geregistreerd in je buurt
             {avg12 != null ? `; het gemiddelde over de 12 maanden daarvoor is ${avg12.toFixed(1).replace('.', ',')}.` : '.'}
           </T>
           <View style={styles.bars} accessibilityLabel={`Misdrijven per maand, laatste ${totaal.length} maanden`}>

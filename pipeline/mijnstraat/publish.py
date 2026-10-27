@@ -1,6 +1,6 @@
 """Publieke kopie van de feed voor GitHub Pages.
 
-Alleen open data gaat online: bekendmakingen (CC0) en misdrijfcijfers per buurt (CBS).
+Alleen open data gaat online: bekendmakingen (CC0), misdrijfcijfers per buurt en wonen/economie (CBS).
 Wijkagenten en politienieuws komen via api.politie.nl, waarvan de licentie nog onduidelijk is;
 die blijven op het thuisnetwerk tot de politie toestemming geeft (keuze van Justin, 2026-10-27).
 """
@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-PUBLIC_FILES = ("veiligheid.json",)
+PUBLIC_FILES = ("veiligheid.json", "cijfers.json")
 PRIVATE_SOURCES = {"politie"}
 
 

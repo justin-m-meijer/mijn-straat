@@ -63,6 +63,30 @@ export type Veiligheid = {
   buurten: Record<string, { naam: string; reeksen: Record<string, (number | null)[]> }>;
 };
 
-export type Extras = { wijkagenten: Wijkagent[]; veiligheid: Veiligheid | null };
+type Reeks = (number | null)[];
+type Tijdreeks = { perioden: string[]; waarden: Reeks };
+type Wonen = { woz: Reeks; woningen: Reeks; koop: Reeks; huur: Reeks; corporatie: Reeks };
+type Laatste = { waarde: number; jaar: string } | null;
+type BuurtEconomie = { inkomen: Laatste; participatie: Laatste; vestigingen: Laatste };
+
+/** Wonen en economie uit CBS-data; reeksen per jaar volgen `wonen.jaren`. */
+export type Cijfers = {
+  bron: string;
+  wonen: {
+    jaren: string[];
+    gemeente: Wonen;
+    buurten: Record<string, Wonen & { naam: string }>;
+    verkoopprijs: Tijdreeks; // gemeente, per jaar ('2025JJ00')
+    prijsindex: { regio: string; perioden: string[]; index?: Reeks; prijs?: Reeks }; // provincie, per kwartaal
+  };
+  economie: {
+    uitkeringen: { perioden: string[]; ww?: Reeks; bijstand?: Reeks; ao?: Reeks }; // gemeente, per maand
+    vestigingen: Tijdreeks; // gemeente, per jaar
+    gemeente: BuurtEconomie;
+    buurten: Record<string, BuurtEconomie>;
+  };
+};
+
+export type Extras = { wijkagenten: Wijkagent[]; veiligheid: Veiligheid | null; cijfers: Cijfers | null };
 
 export type NearbyItem = FeedItem & { distance: number | null };

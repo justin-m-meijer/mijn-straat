@@ -12,7 +12,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, BackHandler, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { loadExtras, loadFeed, loadProfile, saveProfile } from './src/data';
+import { EMPTY_EXTRAS, loadExtras, loadFeed, loadProfile, saveProfile } from './src/data';
+import { CijfersScreen } from './src/screens/CijfersScreen';
 import { DetailScreen } from './src/screens/DetailScreen';
 import { FeedScreen } from './src/screens/FeedScreen';
 import { MapScreen } from './src/screens/MapScreen';
@@ -22,7 +23,7 @@ import type { Extras, Feed, NearbyItem, Profile } from './src/types';
 import { RADII, lookupBuurtcode } from './src/geo';
 import { Glass, GlassGroup, RadiusControl, T, inkMuted, useSideStrip } from './src/ui';
 
-type Tab = 'feed' | 'kaart';
+type Tab = 'feed' | 'kaart' | 'cijfers';
 
 export default function App() {
   return (
@@ -37,7 +38,7 @@ function Root() {
   const [profile, setProfile] = useState<Profile | null | undefined>(undefined);
   const [editing, setEditing] = useState(false);
   const [feed, setFeed] = useState<Feed | null>(null);
-  const [extras, setExtras] = useState<Extras>({ wijkagenten: [], veiligheid: null });
+  const [extras, setExtras] = useState<Extras>(EMPTY_EXTRAS);
   const [refreshing, setRefreshing] = useState(false);
   const [tab, setTab] = useState<Tab>('feed');
   const [open, setOpen] = useState<NearbyItem | null>(null);
@@ -140,8 +141,10 @@ function Root() {
             onRadiusChange={changeRadius}
             extras={extras}
           />
-        ) : (
+        ) : tab === 'kaart' ? (
           <MapScreen feed={feed} profile={profile} onOpen={setOpen} />
+        ) : (
+          <CijfersScreen cijfers={extras.cijfers} profile={profile} />
         )}
       </View>
       {strip ? (
@@ -166,6 +169,7 @@ const STATUS_CLUSTER_HEIGHT = 170;
 const TABS: { key: Tab | 'instellingen'; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
   { key: 'feed', label: 'Feed', icon: 'newspaper' },
   { key: 'kaart', label: 'Kaart', icon: 'map' },
+  { key: 'cijfers', label: 'Cijfers', icon: 'stats-chart' },
   { key: 'instellingen', label: 'Adres', icon: 'location' },
 ];
 
