@@ -92,7 +92,9 @@ function Card({ title, children }: { title: string; children: ReactNode }) {
 
 function Wonen({ c, buurtcode }: { c: Cijfers; buurtcode?: string }) {
   const w = c.wonen;
-  const buurt = buurtcode ? w.buurten[buurtcode] : undefined;
+  const own = buurtcode ? w.buurten[buurtcode] : undefined;
+  // Kleine buurten en bedrijventerreinen hebben geen WOZ-cijfers; toon dan de gemeente.
+  const buurt = own && last(own.woz) ? own : undefined;
   const area = buurt ?? w.gemeente;
   const woz = last(area.woz);
   const woz0 = first(area.woz);
