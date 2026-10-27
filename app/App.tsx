@@ -45,8 +45,13 @@ function Root() {
 
   useEffect(() => {
     loadProfile().then(setProfile);
-    loadFeed().then(setFeed);
-    loadExtras().then(setExtras);
+    // Eerst de feed: die bepaalt of we thuis of online zitten, en daarmee waar de extra bestanden staan.
+    loadFeed()
+      .then((f) => {
+        setFeed(f);
+        return loadExtras();
+      })
+      .then(setExtras);
   }, []);
 
   // Profielen van vóór de misdrijfcijfers hebben nog geen buurtcode: één keer opvragen bij PDOK.
@@ -73,7 +78,8 @@ function Root() {
 
   const refresh = useCallback(async () => {
     setRefreshing(true);
-    const [f, x] = await Promise.all([loadFeed(), loadExtras()]);
+    const f = await loadFeed();
+    const x = await loadExtras();
     setFeed(f);
     setExtras(x);
     setRefreshing(false);
