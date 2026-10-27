@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import sample from './sample-feed.json';
-import type { Extras, Feed, Profile, Veiligheid, Wijkagent } from './types';
+import type { Cijfers, Extras, Feed, Profile, Veiligheid, Wijkagent } from './types';
 
 /**
  * Waar de feed vandaan komt. Zet in app/.env één of meer adressen, gescheiden door komma's:
@@ -47,16 +47,19 @@ export async function loadFeed(): Promise<Feed> {
 }
 
 /**
- * Wijkagenten en misdrijfcijfers staan naast de feed die lukte.
+ * Wijkagenten, misdrijfcijfers en wonen/economie staan naast de feed die lukte.
  * De online kopie heeft geen wijkagenten (licentie politie-API); dan blijft die lijst leeg.
  */
+export const EMPTY_EXTRAS: Extras = { wijkagenten: [], veiligheid: null, cijfers: null };
+
 export async function loadExtras(): Promise<Extras> {
-  if (!activeBase) return { wijkagenten: [], veiligheid: null };
-  const [agents, veiligheid] = await Promise.all([
+  if (!activeBase) return EMPTY_EXTRAS;
+  const [agents, veiligheid, cijfers] = await Promise.all([
     getJson<{ wijkagenten: Wijkagent[] }>(`${activeBase}wijkagenten.json`),
     getJson<Veiligheid>(`${activeBase}veiligheid.json`),
+    getJson<Cijfers>(`${activeBase}cijfers.json`),
   ]);
-  return { wijkagenten: agents?.wijkagenten ?? [], veiligheid };
+  return { wijkagenten: agents?.wijkagenten ?? [], veiligheid, cijfers };
 }
 
 export async function loadProfile(): Promise<Profile | null> {

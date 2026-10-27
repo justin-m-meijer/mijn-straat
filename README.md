@@ -117,3 +117,5 @@ EXPO_PUBLIC_FEED_URL=http://192.168.x.x:8787/lingewaard/feed.json,https://justin
 
 - Officiële bekendmakingen (KOOP), CC0
 - BAG via PDOK Locatieserver (Kadaster), CC0
+- Misdrijven per buurt: © Politie, via CBS (tabel 47022NED)
+- Wonen en economie: CBS, CC BY 4.0. Kerncijfers wijken en buurten 2022–2025 (85318NED, 85618NED, 85984NED, 86165NED), verkoopprijzen per gemeente (83625NED), prijsindex per provincie (85792NED), uitkeringen per gemeente per maand (80794ned) en bedrijfsvestigingen (81575NED). Buurtgrenzen zijn in 2022 herzien, dus buurtreeksen beginnen in 2022. Een werkloosheidspercentage per gemeente publiceert het CBS niet.

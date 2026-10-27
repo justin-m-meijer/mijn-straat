@@ -84,6 +84,17 @@ export function formatDateLong(iso: string): string {
   return new Date(`${iso}T12:00:00`).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
+const MONTHS = ['jan', 'feb', 'mrt', 'apr', 'mei', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
+
+/** CBS-periodecodes leesbaar: '2026MM09' → 'sep 2026', '2026KW03' → 'Q3 2026', '2025JJ00' → '2025'. */
+export function periodLabel(period: string): string {
+  const m = /^(\d{4})(MM|KW|JJ)(\d{2})$/.exec(period);
+  if (!m) return period;
+  if (m[2] === 'MM') return `${MONTHS[Number(m[3]) - 1]} ${m[1]}`;
+  if (m[2] === 'KW') return `Q${Number(m[3])} ${m[1]}`;
+  return m[1];
+}
+
 // Brede schermen (vouwbare telefoons, iPad): inhoud niet breder dan dit, gecentreerd.
 export const MAX_CONTENT_WIDTH = 680;
 

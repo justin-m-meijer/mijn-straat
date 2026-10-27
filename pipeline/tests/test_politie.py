@@ -119,7 +119,7 @@ def test_build_writes_police_files(tmp_path, monkeypatch):
     monkeypatch.setattr(cli.time, "sleep", lambda s: None)
     monkeypatch.setattr(cli, "Config", lambda: _cfg(tmp_path))
 
-    cli.main(["build", "--no-llm"])
+    cli.main(["build", "--no-llm", "--no-cijfers"])
 
     out = tmp_path / "public" / "lingewaard"
     agents = json.loads((out / "wijkagenten.json").read_text())["wijkagenten"]
@@ -136,7 +136,7 @@ def test_build_survives_police_outage(tmp_path, monkeypatch):
 
     def handler(request: httpx.Request) -> httpx.Response:
         host = request.url.host
-        if host in ("api.politie.nl", "dataderden.cbs.nl"):
+        if host in ("api.politie.nl", "dataderden.cbs.nl", "opendata.cbs.nl"):
             return httpx.Response(503)
         if host == "api.pdok.nl" and request.url.params.get("fq") == "type:gemeente":
             return httpx.Response(200, json={"response": {"docs": [{"gemeentecode": "1705"}]}})
@@ -158,6 +158,9 @@ def test_build_survives_police_outage(tmp_path, monkeypatch):
     out = tmp_path / "public" / "lingewaard"
     assert json.loads((out / "feed.json").read_text())["stats"]["items"] == 3
     assert not (out / "wijkagenten.json").exists()
+    # Zonder kerncijfers blijft er een leeg maar geldig cijfersbestand over.
+    cijfers = json.loads((out / "cijfers.json").read_text())
+    assert cijfers["wonen"]["buurten"] == {} and cijfers["economie"]["uitkeringen"]["perioden"] == []
 
 
 def test_politie_requests_use_generic_user_agent():
