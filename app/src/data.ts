@@ -7,7 +7,8 @@ import type { Cijfers, Extras, Feed, Profile, Veiligheid, Wijkagent } from './ty
  * Waar de feed vandaan komt. Zet in app/.env één of meer adressen, gescheiden door komma's:
  *   EXPO_PUBLIC_FEED_URL=http://<ip-van-je-mac>:8787/lingewaard/feed.json,https://justin-m-meijer.github.io/mijn-straat/lingewaard/feed.json
  * De app probeert ze op volgorde: thuis de volledige feed van je Mac, onderweg de online kopie.
- * Lukt geen enkele, dan toont de app voorbeelddata.
+ * De map in de URL ('lingewaard') wordt vervangen door de gemeente van het adres, bijvoorbeeld 'amsterdam'.
+ * Lukt geen enkele, dan toont de app voorbeelddata (Lingewaard) of meldt dat de gemeente er nog niet is.
  */
 const FEED_URLS = (process.env.EXPO_PUBLIC_FEED_URL ?? '')
   .split(',')
@@ -34,8 +35,21 @@ async function getJson<T>(url: string): Promise<T | null> {
   }
 }
 
-export async function loadFeed(): Promise<Feed> {
-  for (const url of FEED_URLS) {
+const DEFAULT_GEMEENTE = 'Lingewaard';
+
+/** Zelfde mapnaam als de pijplijn (`_slug`): kleine letters, spaties worden streepjes. */
+export function gemeenteSlug(gemeente: string): string {
+  return gemeente.trim().toLowerCase().replace(/\s+/g, '-');
+}
+
+/** De feed-URL's uit .env, met de map van de gemeente van het adres. */
+export function feedUrls(urls: string[], gemeente: string): string[] {
+  const slug = gemeenteSlug(gemeente);
+  return urls.map((u) => u.replace(/[^/]+\/feed\.json$/, `${slug}/feed.json`));
+}
+
+export async function loadFeed(gemeente: string = DEFAULT_GEMEENTE): Promise<Feed> {
+  for (const url of feedUrls(FEED_URLS, gemeente)) {
     const feed = await getJson<Feed>(url);
     if (feed) {
       activeBase = url.replace(/[^/]*$/, '');
@@ -43,6 +57,9 @@ export async function loadFeed(): Promise<Feed> {
     }
   }
   activeBase = null;
+  if (FEED_URLS.length && gemeenteSlug(gemeente) !== gemeenteSlug(DEFAULT_GEMEENTE)) {
+    return { gemeente, generated_at: '', model: null, stats: { items: 0, located: 0 }, items: [], unavailable: true };
+  }
   return sample as Feed;
 }
 

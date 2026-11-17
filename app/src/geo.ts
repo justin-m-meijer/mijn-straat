@@ -59,26 +59,33 @@ function byDistanceThenDate(a: NearbyItem, b: NearbyItem): number {
 export async function lookupAddress(
   postcode: string,
   huisnummer: string,
-): Promise<{ address: string; lat: number; lon: number; buurtcode?: string } | null> {
+): Promise<{ address: string; lat: number; lon: number; buurtcode?: string; gemeente?: string } | null> {
   const q = `${postcode.replace(/\s+/g, '')} ${huisnummer.trim()}`;
-  const url = `${LOCATIESERVER}?q=${encodeURIComponent(q)}&fq=type:adres&rows=1&fl=weergavenaam,centroide_ll,buurtcode`;
+  const url = `${LOCATIESERVER}?q=${encodeURIComponent(q)}&fq=type:adres&rows=1&fl=weergavenaam,centroide_ll,buurtcode,gemeentenaam`;
   const resp = await fetch(url);
   if (!resp.ok) throw new Error(`PDOK ${resp.status}`);
   const json = await resp.json();
   const doc = json?.response?.docs?.[0];
   const m = /POINT\((-?[\d.]+) (-?[\d.]+)\)/.exec(doc?.centroide_ll ?? '');
   if (!doc || !m) return null;
-  return { address: doc.weergavenaam, lat: Number(m[2]), lon: Number(m[1]), buurtcode: doc.buurtcode ?? undefined };
+  return {
+    address: doc.weergavenaam,
+    lat: Number(m[2]),
+    lon: Number(m[1]),
+    buurtcode: doc.buurtcode ?? undefined,
+    gemeente: doc.gemeentenaam ?? undefined,
+  };
 }
 
-/** Buurtcode bij een bestaand profiel van vóór de misdrijfcijfers (ook via PDOK, vanaf de telefoon). */
-export async function lookupBuurtcode(lat: number, lon: number): Promise<string | null> {
+/** Buurtcode en gemeente bij een bestaand profiel van vóór die velden (ook via PDOK, vanaf de telefoon). */
+export async function lookupArea(lat: number, lon: number): Promise<{ buurtcode?: string; gemeente?: string } | null> {
   try {
-    const url = `${LOCATIESERVER.replace('/free', '/reverse')}?lat=${lat}&lon=${lon}&type=adres&rows=1&fl=buurtcode`;
+    const url = `${LOCATIESERVER.replace('/free', '/reverse')}?lat=${lat}&lon=${lon}&type=adres&rows=1&fl=buurtcode,gemeentenaam`;
     const resp = await fetch(url);
     if (!resp.ok) return null;
     const json = await resp.json();
-    return json?.response?.docs?.[0]?.buurtcode ?? null;
+    const doc = json?.response?.docs?.[0];
+    return doc ? { buurtcode: doc.buurtcode ?? undefined, gemeente: doc.gemeentenaam ?? undefined } : null;
   } catch {
     return null;
   }

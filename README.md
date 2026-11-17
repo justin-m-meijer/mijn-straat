@@ -46,6 +46,18 @@ Instellingen via omgevingsvariabelen:
 | `MIJNSTRAAT_DAYS` | `90` | Hoe ver terug |
 | `MIJNSTRAAT_MODEL` | `gemma3:12b` | Ollama-model |
 | `OLLAMA_URL` | `http://localhost:11434` | Ollama-adres |
+| `MIJNSTRAAT_FOCUS` | leeg | Alleen rond deze postcode, bijvoorbeeld `1087VX`. Voor grote gemeenten |
+| `MIJNSTRAAT_FOCUS_RADIUS` | `3000` | Straal rond de focuspostcode in meters |
+
+### Een tweede gemeente
+
+Elke gemeente krijgt een eigen map in `data/public/`, bijvoorbeeld `amsterdam/feed.json`. De app kiest de map op basis van de gemeente van het adres dat de gebruiker invult (via PDOK). Voor een grote gemeente als Amsterdam verwerken we alleen de omgeving van één postcode, zodat de Mac geen duizenden stukken hoeft samen te vatten:
+
+```bash
+MIJNSTRAAT_GEMEENTE=Amsterdam mijnstraat build --focus 1087VX --focus-radius 3000
+```
+
+Daarbij blijven over: berichten met een locatie binnen de straal, en berichten zonder locatie over de raad of regels (die toont de app voor de hele gemeente). De CBS-cijfers en misdrijfcijfers komen wel voor alle buurten van de gemeente.
 
 Samenvattingen, teksten en geocodes worden gecachet in `data/cache/`. Een nachtelijke run doet dus alleen nieuwe stukken.
 

@@ -10,7 +10,7 @@ from pathlib import Path
 
 import httpx
 
-from . import bekendmakingen, cbs, politie, publish
+from . import bekendmakingen, cbs, focus, politie, publish
 from .categorize import categorize
 from .config import Config
 from .geocode import Geocoder, guess_address
@@ -124,22 +124,45 @@ def _cijfers(client: httpx.Client, cfg: Config, out: Path) -> None:
         _log(f"  wonen en economie mislukt: {e}")
 
 
+def _focus(client: httpx.Client, geocoder: Geocoder, items: list[Item], postcode: str, radius: int) -> tuple[list[Item], dict]:
+    """Alleen de omgeving van één postcode: eerst goedkoop geocoderen op de titel, dan filteren."""
+    area = focus.resolve(client, postcode)
+    for item in items:
+        if item.lat is None and item.location_hint:
+            hit = geocoder.lookup(item.location_hint)
+            if hit:
+                item.address, item.lat, item.lon = hit
+    geocoder.save()
+    kept = focus.apply(items, area["lat"], area["lon"], radius)
+    _log(f"  focus {area['postcode']} ({area['buurt'] or area['wijk']}), straal {radius} m: {len(kept)} van {len(items)} over")
+    return kept, {**area, "radius": radius}
+
+
 def build(args: argparse.Namespace, cfg: Config) -> None:
     out = Path(cfg.out_dir) / _slug(cfg.gemeente)
     cache = Path(cfg.cache_dir) / _slug(cfg.gemeente)
+    focus_pc = args.focus if args.focus is not None else cfg.focus
+    radius = args.focus_radius or cfg.focus_radius
+    area = None
     with _client(cfg) as client:
+        geocoder = Geocoder(client, cfg.gemeente, cache / "geocode.json")
         _log(f"Bekendmakingen ophalen voor {cfg.gemeente}, laatste {cfg.days} dagen...")
         items = bekendmakingen.fetch(client, cfg.gemeente, cfg.days, limit=args.limit)
         _log(f"  {len(items)} gevonden")
         for item in items:
             item.category = categorize(item.title, item.subjects)
             item.location_hint = item.location_hint or guess_address(item.title)
+        if focus_pc:
+            items, area = _focus(client, geocoder, items, focus_pc, radius)
         _load_texts(client, items, cache / "text")
         if not args.no_llm:
             _log(f"Samenvatten met {cfg.model}...")
             _summarize(Summarizer(client, cfg.ollama_url, args.model or cfg.model), items, cache / "summaries")
         _log("Geocoderen via PDOK...")
-        _geocode(Geocoder(client, cfg.gemeente, cache / "geocode.json"), items)
+        _geocode(geocoder, items)
+        if area:
+            # Een locatie die pas uit de tekst kwam, kan alsnog buiten de straal liggen.
+            items = focus.apply(items, area["lat"], area["lon"], radius)
         out.mkdir(parents=True, exist_ok=True)
         if not args.no_politie:
             items += _politie(client, cfg, items, out)
@@ -153,6 +176,7 @@ def build(args: argparse.Namespace, cfg: Config) -> None:
         "generated_at": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
         "model": None if args.no_llm else (args.model or cfg.model),
         "stats": {"items": len(items), "located": located},
+        "focus": area,
         "items": [i.to_public() for i in items],
     }
     (out / "feed.json").write_text(json.dumps(feed, ensure_ascii=False, indent=1))
@@ -200,6 +224,8 @@ def main(argv: list[str] | None = None) -> None:
     b.add_argument("--no-llm", action="store_true", help="Sla samenvatten over")
     b.add_argument("--no-politie", action="store_true", help="Sla wijkagenten, politienieuws en misdrijfcijfers over")
     b.add_argument("--no-cijfers", action="store_true", help="Sla wonen en economie (CBS) over")
+    b.add_argument("--focus", default=None, help="Alleen rond deze postcode, bijv. 1087VX (grote gemeenten)")
+    b.add_argument("--focus-radius", type=int, default=None, help="Straal rond de focuspostcode in meters (standaard 3000)")
     b.set_defaults(func=build)
 
     c = sub.add_parser("compare", help="Vergelijk samenvattingen van meerdere modellen")

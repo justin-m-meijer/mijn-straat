@@ -20,7 +20,7 @@ import { MapScreen } from './src/screens/MapScreen';
 import { Onboarding } from './src/screens/Onboarding';
 import { colors } from './src/theme';
 import type { Extras, Feed, NearbyItem, Profile } from './src/types';
-import { RADII, lookupBuurtcode } from './src/geo';
+import { RADII, lookupArea } from './src/geo';
 import { Glass, GlassGroup, RadiusControl, T, inkMuted, useSideStrip } from './src/ui';
 
 type Tab = 'feed' | 'kaart' | 'cijfers';
@@ -44,23 +44,38 @@ function Root() {
   const [open, setOpen] = useState<NearbyItem | null>(null);
   const strip = useSideStrip();
 
+  const gemeente = profile?.gemeente;
+  const profileLoaded = profile !== undefined;
+
   useEffect(() => {
     loadProfile().then(setProfile);
-    // Eerst de feed: die bepaalt of we thuis of online zitten, en daarmee waar de extra bestanden staan.
-    loadFeed()
+  }, []);
+
+  // De gemeente van het adres bepaalt welke feed we laden. Eerst de feed: die bepaalt of we thuis
+  // of online zitten, en daarmee waar de extra bestanden staan.
+  useEffect(() => {
+    if (!profileLoaded) return;
+    let cancelled = false;
+    loadFeed(gemeente)
       .then((f) => {
+        if (cancelled) return null;
         setFeed(f);
         return loadExtras();
       })
-      .then(setExtras);
-  }, []);
+      .then((x) => {
+        if (x && !cancelled) setExtras(x);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [profileLoaded, gemeente]);
 
-  // Profielen van vóór de misdrijfcijfers hebben nog geen buurtcode: één keer opvragen bij PDOK.
+  // Oudere profielen hebben nog geen buurtcode of gemeente: één keer opvragen bij PDOK.
   useEffect(() => {
-    if (!profile || profile.buurtcode) return;
-    lookupBuurtcode(profile.lat, profile.lon).then(async (buurtcode) => {
-      if (!buurtcode) return;
-      const p = { ...profile, buurtcode };
+    if (!profile || (profile.buurtcode && profile.gemeente)) return;
+    lookupArea(profile.lat, profile.lon).then(async (area) => {
+      if (!area?.gemeente && !area?.buurtcode) return;
+      const p = { ...profile, buurtcode: profile.buurtcode ?? area.buurtcode, gemeente: profile.gemeente ?? area.gemeente };
       setProfile(p);
       await saveProfile(p);
     });
@@ -79,12 +94,12 @@ function Root() {
 
   const refresh = useCallback(async () => {
     setRefreshing(true);
-    const f = await loadFeed();
+    const f = await loadFeed(gemeente);
     const x = await loadExtras();
     setFeed(f);
     setExtras(x);
     setRefreshing(false);
-  }, []);
+  }, [gemeente]);
 
   const changeRadius = async (radius: number) => {
     if (!profile) return;
