@@ -7,6 +7,7 @@ import { ADVIES, LKI_KLEUR, klasse, lkiVoorStof } from '../lki';
 import { colors } from '../theme';
 import type { Meetstation, Meting, Omgeving, Profile, Zwemplek } from '../types';
 import { T, column, inkMuted } from '../ui';
+import { FadeIn, tint } from '../viz';
 
 const STOFFEN: { key: string; label: string }[] = [
   { key: 'NO2', label: 'Stikstofdioxide' },
@@ -26,14 +27,14 @@ function value(n: number): string {
   return `${(Math.round(n * 10) / 10).toString().replace('.', ',')}`;
 }
 
-function Card({ title, children }: { title: string; children: React.ReactNode }) {
+function Card({ title, index, children }: { title: string; index: number; children: React.ReactNode }) {
   return (
-    <View style={[column, styles.card]}>
+    <FadeIn index={index} style={[column, styles.card]}>
       <T weight="bold" style={{ fontSize: 13, color: colors.ink }}>
         {title}
       </T>
       {children}
-    </View>
+    </FadeIn>
   );
 }
 
@@ -171,7 +172,7 @@ export function LuchtCard({ omgeving, profile }: { omgeving: Omgeving | null; pr
 
   if (!stations.length) return null;
   return (
-    <Card title="Luchtkwaliteit">
+    <Card title="Luchtkwaliteit" index={0}>
       {stations.map((s, i) => (
         <View key={s.nummer} style={{ gap: 12 }}>
           {i > 0 && <View style={[styles.divider, { marginVertical: 4 }]} />}
@@ -193,26 +194,51 @@ function inSeizoen(d = new Date()): boolean {
   return m >= 5 && m <= 9;
 }
 
+// EU-zwemwaterklassen van Rijkswaterstaat.
+function euTint(oordeel: string) {
+  const o = oordeel.toLowerCase();
+  if (o === 'uitstekend' || o === 'goed') return tint.goed;
+  if (o === 'aanvaardbaar') return tint.geel;
+  if (o === 'slecht') return tint.slecht;
+  return tint.neutraal;
+}
+
+function statusTint(status: string) {
+  if (status === 'goed') return tint.goed;
+  if (status === 'nader_onderzoek' || status === 'waarschuwing') return tint.geel;
+  return tint.slecht; // negatief zwemadvies, zwemverbod
+}
+
 function Plek({ p }: { p: Zwemplek & { d: number } }) {
-  const warn = p.status ? WARN.has(p.status) : false;
+  const st = p.status ? statusTint(p.status) : null;
+  const eu = p.eu_oordeel ? euTint(p.eu_oordeel) : null;
   return (
-    <View style={styles.row}>
-      <View style={{ flex: 1 }}>
-        <T weight="semibold" style={{ fontSize: 15, color: colors.text }}>
-          {p.naam}
-        </T>
-        <T style={{ fontSize: 12, color: colors.textMuted }}>
-          {formatDistance(p.d)}
-          {p.eu_oordeel ? ` · waterkwaliteit ${p.eu_oordeel.toLowerCase()}` : ''}
-        </T>
-      </View>
-      {p.status_label && (
-        <View style={[styles.chip, { backgroundColor: warn ? '#F2D9D6' : '#DCEBEA' }]}>
-          <T weight="bold" style={{ fontSize: 13, color: warn ? '#8A2E24' : '#2D5E5B' }}>
-            {p.status_label}
+    <View style={[styles.plek, st && st !== tint.goed && { backgroundColor: st.bg }]}>
+      <View style={[styles.dot, { backgroundColor: (st ?? eu ?? tint.neutraal).solid }]} />
+      <View style={{ flex: 1, gap: 4 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
+          <T weight="semibold" style={{ fontSize: 15, color: colors.text, flexShrink: 1 }}>
+            {p.naam}
           </T>
+          <T style={{ fontSize: 12, color: colors.textMuted }}>{formatDistance(p.d)}</T>
         </View>
-      )}
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+          {p.status_label && st && (
+            <View style={[styles.chip, { backgroundColor: st === tint.goed ? st.bg : colors.white }]}>
+              <T weight="bold" style={{ fontSize: 12, color: st.fg }}>
+                {p.status_label}
+              </T>
+            </View>
+          )}
+          {p.eu_oordeel && eu && (
+            <View style={[styles.chip, { backgroundColor: colors.ivory }]}>
+              <T style={{ fontSize: 12, color: eu.fg }}>
+                Waterkwaliteit <T weight="bold" style={{ fontSize: 12, color: eu.fg }}>{p.eu_oordeel.toLowerCase()}</T>
+              </T>
+            </View>
+          )}
+        </View>
+      </View>
     </View>
   );
 }
@@ -229,11 +255,11 @@ export function ZwemwaterCard({ omgeving, profile }: { omgeving: Omgeving | null
   if (!plekken.length) return null;
   const hasStatus = plekken.some((p) => p.status_label);
   return (
-    <Card title="Zwemwater">
+    <Card title="Zwemwater" index={1}>
       {!inSeizoen() && (
         <T style={styles.body}>Buiten het zwemseizoen (1 mei tot en met 30 september) wordt het water niet gecontroleerd.</T>
       )}
-      <View style={{ gap: 10 }}>
+      <View style={{ gap: 6 }}>
         {plekken.map((p) => (
           <Plek key={p.id || p.naam} p={p} />
         ))}
@@ -251,7 +277,9 @@ const styles = StyleSheet.create({
   body: { fontSize: 14, lineHeight: 20, color: '#374151' },
   divider: { height: 1, backgroundColor: colors.border },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  chip: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
+  chip: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 },
+  plek: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, borderRadius: 12, paddingVertical: 8, paddingHorizontal: 8, marginHorizontal: -8 },
+  dot: { width: 12, height: 12, borderRadius: 6, marginTop: 5 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   band: { borderRadius: 14, padding: 14, gap: 10 },
   bol: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },

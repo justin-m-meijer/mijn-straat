@@ -5,6 +5,7 @@ import { contains } from '../geo';
 import { colors } from '../theme';
 import type { Extras, Profile } from '../types';
 import { T, column, inkMuted, periodLabel } from '../ui';
+import { FadeIn, GrowBars, tint } from '../viz';
 
 const LABELS: Record<string, string> = {
   totaal: 'Alle misdrijven',
@@ -36,10 +37,11 @@ export function BuurtCard({ extras, profile }: { extras: Extras; profile: Profil
   const totaal = buurt?.reeksen.totaal ?? [];
   const last = totaal.length ? totaal[totaal.length - 1] : null;
   const avg12 = average(totaal.slice(-13, -1));
-  const max = Math.max(1, ...totaal.map((n) => n ?? 0));
+  // Boven het gemiddelde kleurt de laatste maand oranje, eronder groen.
+  const accent = last != null && avg12 != null ? (last > avg12 ? tint.let.solid : tint.goed.solid) : undefined;
 
   return (
-    <View style={[column, styles.card]}>
+    <FadeIn style={[column, styles.card]}>
       <T weight="bold" style={{ fontSize: 13, color: colors.ink }}>
         Jouw buurt{buurt ? ` · ${buurt.naam}` : ''}
       </T>
@@ -75,24 +77,22 @@ export function BuurtCard({ extras, profile }: { extras: Extras; profile: Profil
             In {periodLabel(v.perioden[v.perioden.length - 1])} {last === 1 ? 'is 1 misdrijf' : `zijn ${last} misdrijven`} geregistreerd in je buurt
             {avg12 != null ? `; het gemiddelde over de 12 maanden daarvoor is ${avg12.toFixed(1).replace('.', ',')}.` : '.'}
           </T>
-          <View style={styles.bars} accessibilityLabel={`Misdrijven per maand, laatste ${totaal.length} maanden`}>
-            {totaal.map((n, i) => (
-              <View
-                key={v.perioden[i]}
-                style={[styles.bar, { height: 4 + ((n ?? 0) / max) * 36, backgroundColor: i === totaal.length - 1 ? colors.ink : colors.sage }]}
-              />
-            ))}
-          </View>
+          <GrowBars series={totaal} floorRatio={0} accent={accent} label={`Misdrijven per maand, laatste ${totaal.length} maanden`} />
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
             {v.soorten
               .filter((s) => s !== 'totaal')
               .map((s) => {
                 const series = buurt.reeksen[s] ?? [];
-                const sum12 = series.slice(-12).reduce<number>((a, b) => a + (b ?? 0), 0);
+                const sum = (xs: (number | null)[]) => xs.reduce<number>((a, b) => a + (b ?? 0), 0);
+                const sum12 = sum(series.slice(-12));
+                // Vergelijk met de 12 maanden daarvoor, als die er zijn.
+                const prev = series.length >= 24 ? sum(series.slice(-24, -12)) : null;
+                const t = prev == null || sum12 === prev ? tint.neutraal : sum12 > prev ? tint.let : tint.goed;
                 return (
-                  <View key={s} style={styles.pill}>
-                    <T style={{ fontSize: 12, color: colors.ink }}>
-                      {LABELS[s] ?? s}: {sum12} in 12 mnd
+                  <View key={s} style={[styles.pill, { backgroundColor: t.bg }]}>
+                    <T style={{ fontSize: 12, color: t.fg }}>
+                      {LABELS[s] ?? s}: <T weight="bold" style={{ fontSize: 12, color: t.fg }}>{sum12}</T> in 12 mnd
+                      {prev != null && sum12 !== prev ? (sum12 > prev ? ' ▲' : ' ▼') : ''}
                     </T>
                   </View>
                 );
@@ -101,7 +101,7 @@ export function BuurtCard({ extras, profile }: { extras: Extras; profile: Profil
           <T style={{ fontSize: 11, color: inkMuted }}>{v.bron}</T>
         </View>
       )}
-    </View>
+    </FadeIn>
   );
 }
 
@@ -110,7 +110,5 @@ const styles = StyleSheet.create({
   divider: { height: 1, backgroundColor: colors.border },
   link: { minHeight: 44, justifyContent: 'center' },
   linkText: { color: colors.ink, fontSize: 14, textDecorationLine: 'underline' },
-  bars: { flexDirection: 'row', alignItems: 'flex-end', gap: 3, height: 40 },
-  bar: { flex: 1, borderRadius: 2 },
   pill: { backgroundColor: colors.ivory, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 6 },
 });
