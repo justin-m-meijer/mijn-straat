@@ -28,8 +28,37 @@ def test_apply_keeps_nearby_and_gemeentebreed():
 def test_resolve():
     def handler(request):
         assert request.url.params["fq"] == "type:postcode" and request.url.params["q"] == "1087VX"
-        doc = {"postcode": "1087VX", "centroide_ll": "POINT(4.99 52.355)", "gemeentenaam": "Amsterdam", "buurtnaam": "X"}
+        doc = {"postcode": "1087VX", "centroide_ll": "POINT(4.99 52.355)", "gemeentenaam": "Amsterdam", "buurtnaam": "X", "wijknaam": "Y"}
         return httpx.Response(200, json={"response": {"docs": [doc]}})
 
     area = focus.resolve(httpx.Client(transport=httpx.MockTransport(handler)), "1087 vx")
     assert area["lat"] == 52.355 and area["lon"] == 4.99 and area["gemeente"] == "Amsterdam"
+
+
+def test_resolve_fills_buurt_via_adres():
+    calls = []
+
+    def handler(request):
+        fq = request.url.params["fq"]
+        calls.append(fq)
+        if fq == "type:postcode":
+            doc = {"postcode": "1087VX", "centroide_ll": "POINT(5.01296239 52.35144379)", "gemeentenaam": "Amsterdam"}
+        else:
+            assert fq == "type:adres AND postcode:1087VX"
+            doc = {"buurtnaam": "Centrumeiland", "wijknaam": "IJburg-Oost", "buurtcode": "BU0363MK04"}
+        return httpx.Response(200, json={"response": {"docs": [doc]}})
+
+    area = focus.resolve(httpx.Client(transport=httpx.MockTransport(handler)), "1087VX")
+    assert len(calls) == 2
+    assert (area["buurt"], area["wijk"], area["buurtcode"]) == ("Centrumeiland", "IJburg-Oost", "BU0363MK04")
+
+
+def test_resolve_keeps_working_when_adres_lookup_fails():
+    def handler(request):
+        if request.url.params["fq"] == "type:postcode":
+            doc = {"postcode": "1087VX", "centroide_ll": "POINT(5.01 52.35)", "gemeentenaam": "Amsterdam"}
+            return httpx.Response(200, json={"response": {"docs": [doc]}})
+        return httpx.Response(503)
+
+    area = focus.resolve(httpx.Client(transport=httpx.MockTransport(handler)), "1087VX")
+    assert area["gemeente"] == "Amsterdam" and area["buurt"] == ""

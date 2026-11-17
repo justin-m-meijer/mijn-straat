@@ -33,7 +33,7 @@ def resolve(client: httpx.Client, postcode: str) -> dict:
     pc = postcode.replace(" ", "").upper()
     resp = client.get(
         LOCATIESERVER,
-        params={"q": pc, "fq": "type:postcode", "rows": 1, "fl": "postcode,centroide_ll,gemeentenaam,buurtnaam,wijknaam"},
+        params={"q": pc, "fq": "type:postcode", "rows": 1, "fl": "postcode,centroide_ll,gemeentenaam,buurtnaam,wijknaam,buurtcode"},
     )
     resp.raise_for_status()
     docs = resp.json().get("response", {}).get("docs", [])
@@ -41,14 +41,35 @@ def resolve(client: httpx.Client, postcode: str) -> dict:
     if not m:
         raise ValueError(f"postcode niet gevonden: {postcode}")
     d = docs[0]
-    return {
+    area = {
         "postcode": pc,
         "lat": float(m.group(2)),
         "lon": float(m.group(1)),
         "gemeente": d.get("gemeentenaam", ""),
         "buurt": d.get("buurtnaam", ""),
         "wijk": d.get("wijknaam", ""),
+        "buurtcode": d.get("buurtcode", ""),
     }
+    if not area["buurt"] or not area["wijk"]:
+        area.update({k: v for k, v in _buurt_via_adres(client, pc).items() if v and not area[k]})
+    return area
+
+
+def _buurt_via_adres(client: httpx.Client, pc: str) -> dict:
+    """PDOK geeft bij type:postcode geen buurt of wijk; een adres in die postcode wel."""
+    try:
+        resp = client.get(
+            LOCATIESERVER,
+            params={"q": pc, "fq": f"type:adres AND postcode:{pc}", "rows": 1, "fl": "buurtnaam,wijknaam,buurtcode"},
+        )
+        resp.raise_for_status()
+        docs = resp.json().get("response", {}).get("docs", [])
+    except (httpx.HTTPError, ValueError):
+        return {}
+    if not docs:
+        return {}
+    d = docs[0]
+    return {"buurt": d.get("buurtnaam", ""), "wijk": d.get("wijknaam", ""), "buurtcode": d.get("buurtcode", "")}
 
 
 def keep(item: Item, lat: float, lon: float, radius: int) -> bool:
