@@ -127,3 +127,16 @@ export async function loadProfile(): Promise<Profile | null> {
 export async function saveProfile(profile: Profile): Promise<void> {
   await AsyncStorage.setItem(PROFILE_KEY, JSON.stringify({ ...profile, version: PROFILE_VERSION }));
 }
+
+/** Luchtkwaliteitsindex per uur over de afgelopen 24 uur, oud naar nieuw. Past op één pagina (100 per pagina). */
+export async function loadLkiDag(station: string): Promise<Meting[] | null> {
+  const end = new Date();
+  const start = new Date(end.getTime() - 24 * 3600 * 1000);
+  const q = `station_number=${station}&start=${start.toISOString().slice(0, 19)}Z&end=${end.toISOString().slice(0, 19)}Z&order_by=timestamp_measured&order_direction=asc`;
+  const body = await getJson<{ data: LmnRow[] }>(`${LUCHTMEETNET}/lki?${q}`);
+  if (!body) return null;
+  return body.data
+    .filter((r) => r.value != null && r.timestamp_measured)
+    .map((r) => ({ waarde: r.value as number, tijd: r.timestamp_measured }))
+    .sort((a, b) => (a.tijd < b.tijd ? -1 : 1));
+}

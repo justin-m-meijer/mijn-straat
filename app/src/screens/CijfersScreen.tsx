@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors } from '../theme';
 import type { Cijfers, Omgeving, Profile } from '../types';
+import { Compare, FadeIn, GrowBars, SplitBar, Tile, Trend, tint } from '../viz';
 import { LuchtCard, ZwemwaterCard } from './OmgevingCards';
 import { FLOATING_TAB_SPACE, T, column, inkMuted, periodLabel, useSidePadding, useSideStrip } from '../ui';
 
@@ -46,52 +47,22 @@ function first(series: Reeks): { value: number; i: number } | null {
   return i >= 0 ? { value: series![i]!, i } : null;
 }
 
-function Bars({ series, label }: { series: Reeks; label: string }) {
-  const values = series ?? [];
-  if (values.filter((v) => v != null).length < 2) return null;
-  const max = Math.max(1, ...values.map((n) => n ?? 0));
-  const min = Math.min(...values.filter((n): n is number => n != null));
-  // Basis net onder het minimum, zodat kleine verschillen zichtbaar zijn.
-  const floor = min * 0.8;
+function Card({ title, index, children }: { title: string; index: number; children: ReactNode }) {
   return (
-    <View style={styles.bars} accessibilityLabel={label}>
-      {values.map((n, i) => (
-        <View
-          key={i}
-          style={[
-            styles.bar,
-            { height: n == null ? 2 : 4 + ((n - floor) / (max - floor || 1)) * 36, backgroundColor: i === values.length - 1 ? colors.ink : colors.sage },
-          ]}
-        />
-      ))}
-    </View>
-  );
-}
-
-function Stat({ label, value, note }: { label: string; value: string; note?: string }) {
-  return (
-    <View style={styles.stat}>
-      <T style={{ fontSize: 12, color: colors.textMuted }}>{label}</T>
-      <T weight="bold" style={{ fontSize: 17, color: colors.ink }}>
-        {value}
-      </T>
-      {!!note && <T style={{ fontSize: 11, color: inkMuted }}>{note}</T>}
-    </View>
-  );
-}
-
-function Card({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <View style={[column, styles.card]}>
+    <FadeIn index={index} style={[column, styles.card]}>
       <T weight="bold" style={{ fontSize: 13, color: colors.ink }}>
         {title}
       </T>
       {children}
-    </View>
+    </FadeIn>
   );
 }
 
-function Wonen({ c, buurtcode }: { c: Cijfers; buurtcode?: string }) {
+const KOOP = colors.ink;
+const CORPORATIE = colors.media;
+const HUUR_OVERIG = colors.sage;
+
+function Wonen({ c, buurtcode, index }: { c: Cijfers; buurtcode?: string; index: number }) {
   const w = c.wonen;
   const own = buurtcode ? w.buurten[buurtcode] : undefined;
   // Kleine buurten en bedrijventerreinen hebben geen WOZ-cijfers; toon dan de gemeente.
@@ -101,44 +72,79 @@ function Wonen({ c, buurtcode }: { c: Cijfers; buurtcode?: string }) {
   const woz0 = first(area.woz);
   const wozGm = last(w.gemeente.woz);
   const prijs = last(w.verkoopprijs.waarden);
-  const index = last(w.prijsindex.index);
+  const prijsPrev = prijs && prijs.i > 0 ? w.verkoopprijs.waarden[prijs.i - 1] : null;
+  const index_ = last(w.prijsindex.index);
   // Zelfde kwartaal een jaar eerder.
-  const indexYear = index && index.i >= 4 ? w.prijsindex.index?.[index.i - 4] : null;
+  const indexYear = index_ && index_.i >= 4 ? w.prijsindex.index?.[index_.i - 4] : null;
+  const koop = last(area.koop)?.value;
+  const huur = last(area.huur)?.value;
+  const corp = last(area.corporatie)?.value;
 
   return (
-    <Card title={`Wonen${buurt ? ` · ${buurt.naam}` : ''}`}>
+    <Card title={`Wonen${buurt ? ` · ${buurt.naam}` : ''}`} index={index}>
       {woz && (
         <View style={{ gap: 8 }}>
-          <T style={styles.body}>
-            De gemiddelde WOZ-waarde {buurt ? 'in je buurt' : 'in de gemeente'} is {thousands(woz.value)} ({w.jaren[woz.i]})
-            {woz0 && woz0.i < woz.i ? `, ${change(woz.value, woz0.value)} sinds ${w.jaren[woz0.i]}` : ''}
-            {buurt && wozGm ? `. Gemeente: ${thousands(wozGm.value)}.` : '.'}
-          </T>
-          <Bars series={area.woz} label={`WOZ-waarde per jaar, ${w.jaren.join(' tot ')}`} />
+          <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12 }}>
+            <View style={{ flexShrink: 1 }}>
+              <T style={{ fontSize: 12, color: colors.textMuted }}>Gemiddelde WOZ-waarde {buurt ? 'in je buurt' : 'in de gemeente'}</T>
+              <T weight="extrabold" style={{ fontSize: 28, lineHeight: 34, color: colors.ink }}>
+                {thousands(woz.value)}
+              </T>
+            </View>
+            {woz0 && woz0.i < woz.i && <Trend now={woz.value} before={woz0.value} upIsGood suffix={`sinds ${w.jaren[woz0.i]}`} />}
+          </View>
+          <GrowBars series={area.woz} label={`WOZ-waarde per jaar, ${w.jaren.join(' tot ')}`} />
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+            <T style={styles.axis}>{w.jaren[0]}</T>
+            <T style={styles.axis}>{w.jaren[w.jaren.length - 1]}</T>
+          </View>
+          {buurt && wozGm && (
+            <Compare
+              rows={[
+                { label: buurt.naam, value: woz.value, color: colors.ink },
+                { label: 'Gemeente', value: wozGm.value, color: colors.sage },
+              ]}
+              format={thousands}
+            />
+          )}
         </View>
       )}
-      <View style={styles.grid}>
-        {last(area.koop) && <Stat label="Koopwoningen" value={pct(last(area.koop)!.value)} />}
-        {last(area.huur) && <Stat label="Huurwoningen" value={pct(last(area.huur)!.value)} />}
-        {last(area.corporatie) && <Stat label="Van corporatie" value={pct(last(area.corporatie)!.value)} />}
-        {last(area.woningen) && <Stat label="Woningen" value={count(last(area.woningen)!.value)} />}
-      </View>
-      {(prijs || index) && <View style={styles.divider} />}
+      {koop != null && huur != null && (
+        <>
+          <View style={styles.divider} />
+          <T weight="semibold" style={styles.sub}>
+            Woningen{last(area.woningen) ? `: ${count(last(area.woningen)!.value)}` : ''}
+          </T>
+          <SplitBar
+            parts={[
+              { label: 'Koop', value: koop, color: KOOP },
+              ...(corp != null
+                ? [
+                    { label: 'Huur corporatie', value: corp, color: CORPORATIE },
+                    { label: 'Overige huur', value: Math.max(0, huur - corp), color: HUUR_OVERIG },
+                  ]
+                : [{ label: 'Huur', value: huur, color: HUUR_OVERIG }]),
+            ]}
+          />
+        </>
+      )}
+      {(prijs || index_) && <View style={styles.divider} />}
       <View style={styles.grid}>
         {prijs && (
-          <Stat
+          <Tile
             label="Verkoopprijs gemeente"
             value={euro(prijs.value)}
-            note={`${periodLabel(w.verkoopprijs.perioden[prijs.i])}${
-              prijs.i > 0 && w.verkoopprijs.waarden[prijs.i - 1] != null ? `, ${change(prijs.value, w.verkoopprijs.waarden[prijs.i - 1]!)} op jaar` : ''
-            }`}
+            accent={colors.ink}
+            trend={prijsPrev != null ? <Trend now={prijs.value} before={prijsPrev} upIsGood suffix="op jaar" /> : undefined}
+            note={periodLabel(w.verkoopprijs.perioden[prijs.i])}
           />
         )}
-        {index && (
-          <Stat
+        {index_ && (
+          <Tile
             label={`Huizenprijzen ${w.prijsindex.regio}`}
-            value={indexYear != null ? change(index.value, indexYear) : `index ${index.value.toFixed(1).replace('.', ',')}`}
-            note={`${periodLabel(w.prijsindex.perioden[index.i])}${indexYear != null ? ' t.o.v. een jaar eerder' : ''}`}
+            value={indexYear != null ? change(index_.value, indexYear) : `index ${index_.value.toFixed(1).replace('.', ',')}`}
+            accent={colors.media}
+            note={`${periodLabel(w.prijsindex.perioden[index_.i])}${indexYear != null ? ' t.o.v. een jaar eerder' : ''}`}
           />
         )}
       </View>
@@ -146,61 +152,87 @@ function Wonen({ c, buurtcode }: { c: Cijfers; buurtcode?: string }) {
   );
 }
 
-function Economie({ c, buurtcode }: { c: Cijfers; buurtcode?: string }) {
+function Economie({ c, buurtcode, index }: { c: Cijfers; buurtcode?: string; index: number }) {
   const e = c.economie;
   const u = e.uitkeringen;
   const ww = last(u.ww);
   const wwYear = ww && ww.i >= 12 ? u.ww?.[ww.i - 12] : null;
   const bijstand = last(u.bijstand);
+  const bijstandYear = bijstand && bijstand.i >= 12 ? u.bijstand?.[bijstand.i - 12] : null;
   const ao = last(u.ao);
   const vest = last(e.vestigingen.waarden);
   const vest0 = first(e.vestigingen.waarden);
   const buurt = buurtcode ? e.buurten[buurtcode] : undefined;
   const gm = e.gemeente;
+  // Meer WW-uitkeringen dan een jaar eerder kleurt oranje, minder groen.
+  const wwUp = ww && wwYear != null ? ww.value > wwYear : null;
 
   return (
-    <Card title="Economie">
+    <Card title="Economie" index={index}>
       {ww && (
         <View style={{ gap: 8 }}>
-          <T style={styles.body}>
-            In {periodLabel(u.perioden[ww.i])} hadden {count(ww.value)} inwoners van de gemeente een WW-uitkering
-            {wwYear != null ? ` (${change(ww.value, wwYear)} op jaar)` : ''}.
-          </T>
-          <Bars series={u.ww} label="WW-uitkeringen per maand" />
+          <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12 }}>
+            <View style={{ flexShrink: 1 }}>
+              <T style={{ fontSize: 12, color: colors.textMuted }}>WW-uitkeringen in de gemeente, {periodLabel(u.perioden[ww.i])}</T>
+              <T weight="extrabold" style={{ fontSize: 28, lineHeight: 34, color: colors.ink }}>
+                {count(ww.value)}
+              </T>
+            </View>
+            {wwYear != null && <Trend now={ww.value} before={wwYear} upIsGood={false} suffix="op jaar" />}
+          </View>
+          <GrowBars series={u.ww} label="WW-uitkeringen per maand" accent={wwUp == null ? undefined : wwUp ? tint.let.solid : tint.goed.solid} />
         </View>
       )}
       <View style={styles.grid}>
-        {bijstand && <Stat label="Bijstand" value={count(bijstand.value)} note={periodLabel(u.perioden[bijstand.i])} />}
-        {ao && <Stat label="Arbeidsongeschikt" value={count(ao.value)} note={periodLabel(u.perioden[ao.i])} />}
+        {bijstand && (
+          <Tile
+            label="Bijstand"
+            value={count(bijstand.value)}
+            accent={colors.media}
+            trend={bijstandYear != null ? <Trend now={bijstand.value} before={bijstandYear} upIsGood={false} suffix="op jaar" /> : undefined}
+            note={periodLabel(u.perioden[bijstand.i])}
+          />
+        )}
+        {ao && <Tile label="Arbeidsongeschikt" value={count(ao.value)} accent={colors.media} note={periodLabel(u.perioden[ao.i])} />}
         {vest && (
-          <Stat
+          <Tile
             label="Bedrijfsvestigingen"
             value={count(vest.value)}
-            note={
-              vest0 && vest0.i < vest.i
-                ? `${change(vest.value, vest0.value)} sinds ${periodLabel(e.vestigingen.perioden[vest0.i])}`
-                : periodLabel(e.vestigingen.perioden[vest.i])
-            }
+            accent={colors.ink}
+            trend={vest0 && vest0.i < vest.i ? <Trend now={vest.value} before={vest0.value} upIsGood suffix={`sinds ${periodLabel(e.vestigingen.perioden[vest0.i])}`} /> : undefined}
+            note={periodLabel(e.vestigingen.perioden[vest.i])}
           />
         )}
       </View>
-      {(buurt?.inkomen || buurt?.participatie || gm.inkomen) && <View style={styles.divider} />}
-      <View style={styles.grid}>
-        {(buurt?.inkomen ?? gm.inkomen) && (
-          <Stat
-            label={buurt?.inkomen ? 'Inkomen per inwoner, buurt' : 'Inkomen per inwoner'}
-            value={thousands((buurt?.inkomen ?? gm.inkomen)!.waarde)}
-            note={`${(buurt?.inkomen ?? gm.inkomen)!.jaar}${buurt?.inkomen && gm.inkomen ? `; gemeente ${thousands(gm.inkomen.waarde)}` : ''}`}
+      {(buurt?.inkomen || gm.inkomen) && (
+        <>
+          <View style={styles.divider} />
+          <T weight="semibold" style={styles.sub}>
+            Inkomen per inwoner ({(buurt?.inkomen ?? gm.inkomen)!.jaar})
+          </T>
+          <Compare
+            rows={[
+              ...(buurt?.inkomen ? [{ label: 'Je buurt', value: buurt.inkomen.waarde, color: colors.ink }] : []),
+              ...(gm.inkomen ? [{ label: 'Gemeente', value: gm.inkomen.waarde, color: colors.sage }] : []),
+            ]}
+            format={thousands}
           />
-        )}
-        {(buurt?.participatie ?? gm.participatie) && (
-          <Stat
-            label="Werkend (netto participatie)"
-            value={pct((buurt?.participatie ?? gm.participatie)!.waarde)}
-            note={`${(buurt?.participatie ?? gm.participatie)!.jaar}${buurt?.participatie && gm.participatie ? `; gemeente ${pct(gm.participatie.waarde)}` : ''}`}
+        </>
+      )}
+      {(buurt?.participatie ?? gm.participatie) && (
+        <>
+          <T weight="semibold" style={styles.sub}>
+            Werkend, netto arbeidsparticipatie ({(buurt?.participatie ?? gm.participatie)!.jaar})
+          </T>
+          <Compare
+            rows={[
+              ...(buurt?.participatie ? [{ label: 'Je buurt', value: buurt.participatie.waarde, color: colors.ink }] : []),
+              ...(gm.participatie ? [{ label: 'Gemeente', value: gm.participatie.waarde, color: colors.sage }] : []),
+            ]}
+            format={(n) => pct(n)}
           />
-        )}
-      </View>
+        </>
+      )}
       <T style={{ fontSize: 12, color: colors.textMuted }}>
         Het CBS publiceert geen werkloosheidspercentage per gemeente; het aantal WW-uitkeringen is het lokale signaal.
       </T>
@@ -230,8 +262,8 @@ export function CijfersScreen({ cijfers, omgeving, profile }: { cijfers: Cijfers
       <ZwemwaterCard omgeving={omgeving} profile={profile} />
       {cijfers ? (
         <>
-          <Wonen c={cijfers} buurtcode={profile.buurtcode} />
-          <Economie c={cijfers} buurtcode={profile.buurtcode} />
+          <Wonen c={cijfers} buurtcode={profile.buurtcode} index={2} />
+          <Economie c={cijfers} buurtcode={profile.buurtcode} index={3} />
           <T style={[column, { fontSize: 11, color: inkMuted }]}>Bron: {cijfers.bron}</T>
         </>
       ) : (
@@ -246,7 +278,6 @@ const styles = StyleSheet.create({
   body: { fontSize: 14, lineHeight: 20, color: '#374151' },
   divider: { height: 1, backgroundColor: colors.border },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  stat: { backgroundColor: colors.ivory, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, minWidth: '47%', flexGrow: 1, gap: 2 },
-  bars: { flexDirection: 'row', alignItems: 'flex-end', gap: 3, height: 40 },
-  bar: { flex: 1, borderRadius: 2 },
+  sub: { fontSize: 13, color: colors.ink },
+  axis: { fontSize: 11, color: inkMuted },
 });
