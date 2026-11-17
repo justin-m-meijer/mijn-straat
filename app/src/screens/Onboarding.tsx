@@ -14,8 +14,8 @@ export function Onboarding({ initial, onDone }: { initial: Profile | null; onDon
   const side = useSidePadding(24);
   const [postcode, setPostcode] = useState('');
   const [huisnummer, setHuisnummer] = useState('');
-  const [found, setFound] = useState<{ address: string; lat: number; lon: number } | null>(
-    initial ? { address: initial.address, lat: initial.lat, lon: initial.lon } : null,
+  const [found, setFound] = useState<Pick<Profile, 'address' | 'lat' | 'lon' | 'buurtcode' | 'gemeente'> | null>(
+    initial ? { address: initial.address, lat: initial.lat, lon: initial.lon, buurtcode: initial.buurtcode, gemeente: initial.gemeente } : null,
   );
   const [radius, setRadius] = useState(initial?.radius ?? 1000);
   const [topics, setTopics] = useState<Category[]>(initial?.topics ?? TOPICS);

@@ -56,6 +56,16 @@ export function FeedScreen({
         {/* naast de categorie 'Alles' zou een tweede 'Alles' verwarren; in de smalle zijrail past alleen 'Alles' */}
         {!strip && <RadiusControl radii={RADII} value={profile.radius} onChange={onRadiusChange} wholeLabel="Gemeente" />}
         {filter === 'alles' && <BuurtCard extras={extras} profile={profile} />}
+        {feed.unavailable && (
+          <View style={styles.sample}>
+            <T style={{ fontSize: 12, color: '#6B5426' }}>Mijn Straat is er nog niet voor {feed.gemeente}. Kies een adres in een gemeente die we al volgen.</T>
+          </View>
+        )}
+        {!!feed.focus && (
+          <T style={{ fontSize: 12, color: colors.textMuted }}>
+            In {feed.gemeente} volgen we voorlopig alleen de omgeving van {feed.focus.postcode} ({formatDistance(feed.focus.radius)} rondom).
+          </T>
+        )}
         {feed.sample && (
           <View style={styles.sample}>
             <T style={{ fontSize: 12, color: '#6B5426' }}>Voorbeelddata. Zet EXPO_PUBLIC_FEED_URL om de echte feed van je Mac te laden.</T>

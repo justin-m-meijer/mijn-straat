@@ -12,4 +12,7 @@ class Config:
     model: str = os.environ.get("MIJNSTRAAT_MODEL", "gemma3:12b")
     out_dir: str = os.environ.get("MIJNSTRAAT_OUT", "../data/public")
     cache_dir: str = os.environ.get("MIJNSTRAAT_CACHE", "../data/cache")
+    # Optioneel focusgebied voor grote gemeenten, bijvoorbeeld MIJNSTRAAT_FOCUS=1087VX (straal in meters).
+    focus: str = os.environ.get("MIJNSTRAAT_FOCUS", "")
+    focus_radius: int = int(os.environ.get("MIJNSTRAAT_FOCUS_RADIUS", "3000"))
     user_agent: str = "MijnStraat-POC/0.1 (Jumpstart Media)"

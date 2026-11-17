@@ -23,6 +23,10 @@ export type Feed = {
   stats: { items: number; located: number };
   items: FeedItem[];
   sample?: boolean;
+  /** Er is (nog) geen feed voor de gemeente van het adres. */
+  unavailable?: boolean;
+  /** Grote gemeenten verwerken we alleen rond één postcode. */
+  focus?: { postcode: string; lat: number; lon: number; radius: number; buurt?: string; wijk?: string } | null;
 };
 
 export type Profile = {
@@ -32,6 +36,7 @@ export type Profile = {
   radius: number; // meters, 0 = hele gemeente
   topics: Category[];
   buurtcode?: string; // CBS-buurtcode via PDOK, voor de misdrijfcijfers
+  gemeente?: string; // via PDOK; bepaalt welke feed de app ophaalt
   version?: number;
 };
 
