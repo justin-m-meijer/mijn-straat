@@ -159,7 +159,7 @@ function Root() {
         ) : tab === 'kaart' ? (
           <MapScreen feed={feed} profile={profile} onOpen={setOpen} />
         ) : (
-          <CijfersScreen cijfers={extras.cijfers} profile={profile} />
+          <CijfersScreen cijfers={extras.cijfers} omgeving={extras.omgeving} profile={profile} />
         )}
       </View>
       {strip ? (

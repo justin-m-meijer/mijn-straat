@@ -92,6 +92,39 @@ export type Cijfers = {
   };
 };
 
-export type Extras = { wijkagenten: Wijkagent[]; veiligheid: Veiligheid | null; cijfers: Cijfers | null };
+export type Meting = { waarde: number; tijd: string };
+
+/** Meetstation van Luchtmeetnet; `laatste` per stof ('NO2', 'PM10', 'PM25', 'O3') en 'LKI'. */
+export type Meetstation = {
+  nummer: string;
+  naam: string;
+  lat: number;
+  lon: number;
+  type: string;
+  stoffen: string[];
+  afstand?: number;
+  laatste?: Record<string, Meting>;
+};
+
+export type Zwemplek = {
+  id: string;
+  naam: string;
+  adres?: string;
+  lat: number;
+  lon: number;
+  /** Actuele status van zwemwater.nl; ontbreekt in de online kopie. */
+  status?: string;
+  status_label?: string;
+  eu_oordeel?: string | null;
+};
+
+/** Lucht en zwemwater rond de gemeente of het focusgebied. */
+export type Omgeving = {
+  generated_at?: string;
+  lucht?: { bron: string; stations: Meetstation[] };
+  zwemwater?: { bron: string; plekken: Zwemplek[] };
+};
+
+export type Extras = { wijkagenten: Wijkagent[]; veiligheid: Veiligheid | null; cijfers: Cijfers | null; omgeving: Omgeving | null };
 
 export type NearbyItem = FeedItem & { distance: number | null };

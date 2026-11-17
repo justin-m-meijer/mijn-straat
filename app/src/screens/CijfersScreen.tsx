@@ -3,7 +3,8 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors } from '../theme';
-import type { Cijfers, Profile } from '../types';
+import type { Cijfers, Omgeving, Profile } from '../types';
+import { LuchtCard, ZwemwaterCard } from './OmgevingCards';
 import { FLOATING_TAB_SPACE, T, column, inkMuted, periodLabel, useSidePadding, useSideStrip } from '../ui';
 
 type Reeks = (number | null)[] | undefined;
@@ -207,8 +208,8 @@ function Economie({ c, buurtcode }: { c: Cijfers; buurtcode?: string }) {
   );
 }
 
-/** Wonen en economie voor je buurt en gemeente, uit open CBS-data. */
-export function CijfersScreen({ cijfers, profile }: { cijfers: Cijfers | null; profile: Profile }) {
+/** Lucht en zwemwater, en wonen en economie voor je buurt en gemeente, uit open data. */
+export function CijfersScreen({ cijfers, omgeving, profile }: { cijfers: Cijfers | null; omgeving: Omgeving | null; profile: Profile }) {
   const insets = useSafeAreaInsets();
   const strip = useSideStrip();
   const base = useSidePadding();
@@ -225,6 +226,8 @@ export function CijfersScreen({ cijfers, profile }: { cijfers: Cijfers | null; p
         </T>
         <T style={{ color: colors.textMuted, fontSize: 15 }}>{profile.address}</T>
       </View>
+      <LuchtCard omgeving={omgeving} profile={profile} />
+      <ZwemwaterCard omgeving={omgeving} profile={profile} />
       {cijfers ? (
         <>
           <Wonen c={cijfers} buurtcode={profile.buurtcode} />
