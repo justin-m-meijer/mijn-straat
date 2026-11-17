@@ -61,6 +61,14 @@ Daarbij blijven over: berichten met een locatie binnen de straal, en berichten z
 
 Samenvattingen, teksten en geocodes worden gecachet in `data/cache/`. Een nachtelijke run doet dus alleen nieuwe stukken.
 
+### Lucht en zwemwater
+
+`mijnstraat build` schrijft ook `omgeving.json`: de zes dichtstbijzijnde meetstations van Luchtmeetnet (binnen 25 km) met hun laatste uurwaarden, en de officiële zwemplekken binnen 15 km met hun actuele status. Het middelpunt is het focusgebied, of anders het midden van de bekendmakingen in de gemeente. Overslaan kan met `--no-omgeving`.
+
+- Luchtmeetnet staat maximaal 100 verzoeken per 5 minuten toe. De eerste run haalt alle ±103 stations op met 3 seconden pauze (ruim 5 minuten); daarna komen ze een maand uit `data/cache/_landelijk/`.
+- De app haalt de uurwaarden van de twee dichtstbijzijnde stations zelf live op bij Luchtmeetnet; de waarden in `omgeving.json` zijn de terugval.
+- Zwemwater.nl heeft geen API. De pijplijn leest de zwemplekken uit hun homepage (één verzoek). Dat is fragiel: als de site verandert, blijft de lijst leeg en loopt de rest van de run gewoon door.
+
 ### Modellen vergelijken
 
 ```bash
@@ -112,7 +120,7 @@ scripts/publish.sh                        # handmatig publiceren
 scripts/install-nightly.sh --publish      # nachtjob die na elke run ook publiceert
 ```
 
-De feed staat dan op `https://justin-m-meijer.github.io/mijn-straat/lingewaard/feed.json`. Alleen open data gaat online: bekendmakingen en CBS-cijfers. Wijkagenten en politienieuws (api.politie.nl, licentie onduidelijk) blijven op je thuisnetwerk.
+De feed staat dan op `https://justin-m-meijer.github.io/mijn-straat/lingewaard/feed.json`. Alleen open data gaat online: bekendmakingen, CBS-cijfers, luchtkwaliteit en het EU-zwemwateroordeel. Wijkagenten en politienieuws (api.politie.nl) en de actuele zwemstatus van zwemwater.nl (licenties onduidelijk) blijven op je thuisnetwerk.
 
 In `app/.env` kun je meerdere feeds opgeven, gescheiden door komma's. De app probeert ze op volgorde, dus thuis de volledige feed van je Mac en onderweg de online feed:
 
@@ -130,4 +138,6 @@ EXPO_PUBLIC_FEED_URL=http://192.168.x.x:8787/lingewaard/feed.json,https://justin
 - Officiële bekendmakingen (KOOP), CC0
 - BAG via PDOK Locatieserver (Kadaster), CC0
 - Misdrijven per buurt: © Politie, via CBS (tabel 47022NED)
+- Luchtkwaliteit: www.luchtmeetnet.nl (RIVM, GGD's, provincies), CC BY-ND 4.0. Ongevalideerde uurwaarden, ongewijzigd getoond met bronvermelding; geen eigen interpolatie (ND).
+- Zwemwater: actuele status van zwemwater.nl (provincies, geen expliciete licentie, alleen thuis); EU-zwemwateroordeel uit Rijkswaterstaat Zwemwateronderzoek (OGC API Features). De PDOK-dienst zwemwaterkwaliteit bevat alleen losse meetwaarden zonder naam of oordeel en is niet bruikbaar.
 - Wonen en economie: CBS, CC BY 4.0. Kerncijfers wijken en buurten 2022–2025 (85318NED, 85618NED, 85984NED, 86165NED), verkoopprijzen per gemeente (83625NED), prijsindex per provincie (85792NED), uitkeringen per gemeente per maand (80794ned) en bedrijfsvestigingen (81575NED). Buurtgrenzen zijn in 2022 herzien, dus buurtreeksen beginnen in 2022. Een werkloosheidspercentage per gemeente publiceert het CBS niet.

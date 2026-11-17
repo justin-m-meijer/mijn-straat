@@ -10,7 +10,7 @@ from pathlib import Path
 
 import httpx
 
-from . import bekendmakingen, cbs, focus, politie, publish
+from . import bekendmakingen, cbs, focus, omgeving, politie, publish
 from .categorize import categorize
 from .config import Config
 from .geocode import Geocoder, guess_address
@@ -124,6 +124,30 @@ def _cijfers(client: httpx.Client, cfg: Config, out: Path) -> None:
         _log(f"  wonen en economie mislukt: {e}")
 
 
+def _omgeving(client: httpx.Client, cfg: Config, items: list[Item], area: dict | None, out: Path) -> None:
+    """Lucht en zwemwater rond het focusgebied, of anders rond het midden van de gemeente."""
+    center = (area["lat"], area["lon"]) if area else politie.centroid((i.lat, i.lon) for i in items if i.lat is not None and i.lon is not None)
+    if not center:
+        _log("  geen middelpunt voor lucht en zwemwater")
+        return
+    result: dict = {"midden": {"lat": round(center[0], 5), "lon": round(center[1], 5)}}
+    try:
+        _log("Luchtkwaliteit ophalen (Luchtmeetnet)...")
+        result["lucht"] = omgeving.fetch_lucht(client, *center, Path(cfg.cache_dir) / "_landelijk" / "luchtmeetnet-stations.json", log=_log)
+        _log(f"  {len(result['lucht']['stations'])} meetstations in de buurt")
+    except (httpx.HTTPError, ValueError, KeyError) as e:
+        _log(f"  luchtkwaliteit mislukt: {e}")
+    try:
+        _log("Zwemwater ophalen (zwemwater.nl, Rijkswaterstaat)...")
+        result["zwemwater"] = omgeving.fetch_zwemwater(client, *center, log=_log)
+        _log(f"  {len(result['zwemwater']['plekken'])} zwemplekken in de buurt")
+    except (httpx.HTTPError, ValueError, KeyError) as e:
+        _log(f"  zwemwater mislukt: {e}")
+    if "lucht" in result or "zwemwater" in result:
+        result["generated_at"] = dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
+        (out / "omgeving.json").write_text(json.dumps(result, ensure_ascii=False, indent=1))
+
+
 def _focus(client: httpx.Client, geocoder: Geocoder, items: list[Item], postcode: str, radius: int) -> tuple[list[Item], dict]:
     """Alleen de omgeving van één postcode: eerst goedkoop geocoderen op de titel, dan filteren."""
     area = focus.resolve(client, postcode)
@@ -168,6 +192,8 @@ def build(args: argparse.Namespace, cfg: Config) -> None:
             items += _politie(client, cfg, items, out)
         if not args.no_cijfers:
             _cijfers(client, cfg, out)
+        if not args.no_omgeving:
+            _omgeving(client, cfg, items, area, out)
 
     items.sort(key=lambda i: i.published, reverse=True)
     located = sum(1 for i in items if i.lat is not None)
@@ -224,6 +250,7 @@ def main(argv: list[str] | None = None) -> None:
     b.add_argument("--no-llm", action="store_true", help="Sla samenvatten over")
     b.add_argument("--no-politie", action="store_true", help="Sla wijkagenten, politienieuws en misdrijfcijfers over")
     b.add_argument("--no-cijfers", action="store_true", help="Sla wonen en economie (CBS) over")
+    b.add_argument("--no-omgeving", action="store_true", help="Sla luchtkwaliteit en zwemwater over")
     b.add_argument("--focus", default=None, help="Alleen rond deze postcode, bijv. 1087VX (grote gemeenten)")
     b.add_argument("--focus-radius", type=int, default=None, help="Straal rond de focuspostcode in meters (standaard 3000)")
     b.set_defaults(func=build)

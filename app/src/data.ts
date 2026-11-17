@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import sample from './sample-feed.json';
-import type { Cijfers, Extras, Feed, Profile, Veiligheid, Wijkagent } from './types';
+import type { Cijfers, Extras, Feed, Meting, Omgeving, Profile, Veiligheid, Wijkagent } from './types';
 
 /**
  * Waar de feed vandaan komt. Zet in app/.env één of meer adressen, gescheiden door komma's:
@@ -67,16 +67,45 @@ export async function loadFeed(gemeente: string = DEFAULT_GEMEENTE): Promise<Fee
  * Wijkagenten, misdrijfcijfers en wonen/economie staan naast de feed die lukte.
  * De online kopie heeft geen wijkagenten (licentie politie-API); dan blijft die lijst leeg.
  */
-export const EMPTY_EXTRAS: Extras = { wijkagenten: [], veiligheid: null, cijfers: null };
+export const EMPTY_EXTRAS: Extras = { wijkagenten: [], veiligheid: null, cijfers: null, omgeving: null };
 
 export async function loadExtras(): Promise<Extras> {
   if (!activeBase) return EMPTY_EXTRAS;
-  const [agents, veiligheid, cijfers] = await Promise.all([
+  const [agents, veiligheid, cijfers, omgeving] = await Promise.all([
     getJson<{ wijkagenten: Wijkagent[] }>(`${activeBase}wijkagenten.json`),
     getJson<Veiligheid>(`${activeBase}veiligheid.json`),
     getJson<Cijfers>(`${activeBase}cijfers.json`),
+    getJson<Omgeving>(`${activeBase}omgeving.json`),
   ]);
-  return { wijkagenten: agents?.wijkagenten ?? [], veiligheid, cijfers };
+  return { wijkagenten: agents?.wijkagenten ?? [], veiligheid, cijfers, omgeving };
+}
+
+const LUCHTMEETNET = 'https://api.luchtmeetnet.nl/open_api';
+
+type LmnRow = { formula: string; value: number | null; timestamp_measured: string };
+
+/**
+ * Actuele uurwaarden rechtstreeks bij Luchtmeetnet: de feed van de Mac is hooguit een dag oud,
+ * luchtkwaliteit verandert per uur. Open API zonder sleutel (fair use: 100 verzoeken per 5 minuten
+ * per afzender); de app vraagt per station twee dingen op. Lukt het niet, dan blijft de waarde uit de feed staan.
+ */
+export async function loadLiveLucht(station: string): Promise<Record<string, Meting> | null> {
+  const end = new Date();
+  const start = new Date(end.getTime() - 6 * 3600 * 1000);
+  // Met start en end geen omweg via een redirect.
+  const q = `station_number=${station}&start=${start.toISOString().slice(0, 19)}Z&end=${end.toISOString().slice(0, 19)}Z&order_by=timestamp_measured&order_direction=desc`;
+  const [m, lki] = await Promise.all([
+    getJson<{ data: LmnRow[] }>(`${LUCHTMEETNET}/measurements?${q}`),
+    getJson<{ data: LmnRow[] }>(`${LUCHTMEETNET}/lki?${q}`),
+  ]);
+  if (!m && !lki) return null;
+  const out: Record<string, Meting> = {};
+  for (const r of [...(m?.data ?? []), ...(lki?.data ?? [])]) {
+    if (r.value == null || !r.timestamp_measured) continue;
+    const prev = out[r.formula];
+    if (!prev || r.timestamp_measured > prev.tijd) out[r.formula] = { waarde: r.value, tijd: r.timestamp_measured };
+  }
+  return out;
 }
 
 export async function loadProfile(): Promise<Profile | null> {
