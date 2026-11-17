@@ -259,15 +259,15 @@ def fetch_veiligheid(client: httpx.Client, gemeente: str, months: int = 24) -> d
     }
     periods = last_periods(months)
     type_filter = " or ".join(f"SoortMisdrijf eq '{raw_keys[k]}'" for k in types)
-    flt = (
-        f"(startswith(WijkenEnBuurten,'BU{code}') or startswith(WijkenEnBuurten,'GM{code}'))"
-        f" and Perioden ge '{periods[0]}' and ({type_filter})"
-    )
+    area = f"(startswith(WijkenEnBuurten,'BU{code}') or startswith(WijkenEnBuurten,'GM{code}'))"
     rows: list[dict] = []
-    url: str | None = f"{CBS_ODATA}/TypedDataSet"
-    params: dict | None = {"$filter": flt}
-    while url:
-        payload = client.get(url, params=params).raise_for_status().json()
-        rows += payload.get("value", [])
-        url, params = payload.get("odata.nextLink"), None
+    # CBS weigert queries met meer dan 10.000 rijen; Amsterdam heeft ~600 buurten,
+    # dus we vragen per maand op (buurten x soorten blijft dan ruim onder de grens).
+    for period in periods:
+        url: str | None = f"{CBS_ODATA}/TypedDataSet"
+        params: dict | None = {"$filter": f"{area} and Perioden eq '{period}' and ({type_filter})"}
+        while url:
+            payload = client.get(url, params=params).raise_for_status().json()
+            rows += payload.get("value", [])
+            url, params = payload.get("odata.nextLink"), None
     return build_veiligheid(rows, types, buurten, f"GM{code}", periods)
