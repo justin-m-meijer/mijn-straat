@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Animated, StyleSheet, View } from 'react-native';
 
-import { loadLiveLucht } from '../data';
+import { loadLiveLucht, loadLkiDag } from '../data';
 import { distanceMeters, formatDistance } from '../geo';
 import { ADVIES, LKI_KLEUR, klasse, lkiVoorStof } from '../lki';
 import { colors } from '../theme';
 import type { Meetstation, Meting, Omgeving, Profile, Zwemplek } from '../types';
 import { T, column, inkMuted } from '../ui';
-import { FadeIn, tint } from '../viz';
+import { FadeIn, tint, useGrow } from '../viz';
 
 const STOFFEN: { key: string; label: string }[] = [
   { key: 'NO2', label: 'Stikstofdioxide' },
@@ -92,7 +92,61 @@ function StofTegel({ stof, label, m }: { stof: string; label: string; m: Meting 
   );
 }
 
-function Station({ s, d, live }: { s: Meetstation; d: number; live: Record<string, Meting> | null | undefined }) {
+function uur(iso: string): string {
+  return new Date(iso).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+}
+
+/** Index per uur, afgelopen 24 uur: hoogte en kleur volgen de klasse. */
+export function LkiDag({ reeks }: { reeks: Meting[] }) {
+  const grow = useGrow(200, 900);
+  if (reeks.length < 2) return null;
+  const n = reeks.length;
+  const max = Math.max(...reeks.map((m) => m.waarde));
+  const min = Math.min(...reeks.map((m) => m.waarde));
+  const H = 56;
+  return (
+    <View style={{ gap: 4 }}>
+      <T weight="semibold" style={{ fontSize: 12, color: colors.ink }}>
+        Afgelopen 24 uur{' '}
+        <T style={{ fontSize: 12, color: colors.textMuted }}>
+          (index {min === max ? min : `${min} tot ${max}`})
+        </T>
+      </T>
+      <View
+        style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 2, height: H }}
+        accessibilityLabel={`Luchtkwaliteitsindex per uur over de afgelopen 24 uur, van ${min} tot ${max}`}
+      >
+        {reeks.map((m, i) => {
+          const scaleY = grow.interpolate({
+            inputRange: [0, Math.min(0.99, (i / n) * 0.6), Math.min(1, (i / n) * 0.6 + 0.4)],
+            outputRange: [0.02, 0.02, 1],
+            extrapolate: 'clamp',
+          });
+          return (
+            <Animated.View
+              key={m.tijd}
+              style={{
+                flex: 1,
+                height: 6 + ((Math.min(m.waarde, 11) - 1) / 10) * (H - 6),
+                borderRadius: 2,
+                backgroundColor: LKI_KLEUR[Math.max(1, Math.min(11, Math.round(m.waarde)))],
+                transformOrigin: 'bottom',
+                transform: [{ scaleY }],
+              }}
+            />
+          );
+        })}
+      </View>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+        <T style={{ fontSize: 11, color: inkMuted }}>{uur(reeks[0].tijd)}</T>
+        <T style={{ fontSize: 11, color: inkMuted }}>{uur(reeks[Math.floor(n / 2)].tijd)}</T>
+        <T style={{ fontSize: 11, color: inkMuted }}>{uur(reeks[n - 1].tijd)}</T>
+      </View>
+    </View>
+  );
+}
+
+function Station({ s, d, live, dag }: { s: Meetstation; d: number; live: Record<string, Meting> | null | undefined; dag?: Meting[] | null }) {
   const laatste = live ?? s.laatste ?? {};
   const lki = laatste.LKI;
   const k = lki ? klasse(lki.waarde) : null;
@@ -137,6 +191,7 @@ function Station({ s, d, live }: { s: Meetstation; d: number; live: Record<strin
           </View>
         </View>
       )}
+      {dag && <LkiDag reeks={dag} />}
       {stoffen.length > 0 ? (
         <View style={styles.grid}>
           {stoffen.map((x) => (
@@ -155,6 +210,7 @@ export function LuchtCard({ omgeving, profile }: { omgeving: Omgeving | null; pr
   const stations = useMemo(() => withDistance(omgeving?.lucht?.stations ?? [], profile).slice(0, 2), [omgeving, profile]);
   // undefined = nog bezig, null = mislukt (dan de waarden uit de feed).
   const [live, setLive] = useState<Record<string, Record<string, Meting> | null>>({});
+  const [dag, setDag] = useState<Record<string, Meting[] | null>>({});
   const key = stations.map((s) => s.nummer).join(',');
 
   useEffect(() => {
@@ -162,6 +218,9 @@ export function LuchtCard({ omgeving, profile }: { omgeving: Omgeving | null; pr
     for (const s of stations) {
       loadLiveLucht(s.nummer).then((m) => {
         if (!cancelled) setLive((prev) => ({ ...prev, [s.nummer]: m }));
+      });
+      loadLkiDag(s.nummer).then((r) => {
+        if (!cancelled) setDag((prev) => ({ ...prev, [s.nummer]: r }));
       });
     }
     return () => {
@@ -176,7 +235,7 @@ export function LuchtCard({ omgeving, profile }: { omgeving: Omgeving | null; pr
       {stations.map((s, i) => (
         <View key={s.nummer} style={{ gap: 12 }}>
           {i > 0 && <View style={[styles.divider, { marginVertical: 4 }]} />}
-          <Station s={s} d={s.d} live={live[s.nummer]} />
+          <Station s={s} d={s.d} live={live[s.nummer]} dag={dag[s.nummer]} />
         </View>
       ))}
       <T style={{ fontSize: 12, color: colors.textMuted }}>
