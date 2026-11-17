@@ -188,3 +188,34 @@ def _fetch_without_date_filter(real):
         return real(client, gemeente, days=3650, limit=limit)
 
     return fetch
+
+
+def test_fetch_splits_into_week_windows(monkeypatch):
+    import datetime as dt
+
+    import httpx
+
+    queries = []
+
+    def handler(request):
+        queries.append(request.url.params["query"])
+        return httpx.Response(200, text=EMPTY_SRU)
+
+    monkeypatch.setattr(bekendmakingen.dt, "date", _FixedDate)
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    bekendmakingen.fetch(client, "Amsterdam", 20)
+    assert len(queries) == 3  # 20 dagen terug = 21 dagen in vensters van 7
+    assert "dt.available>=2026-11-11" in queries[0] and "dt.available<=2026-11-17" in queries[0]
+    assert "dt.available>=2026-10-28" in queries[-1] and "dt.available<=2026-11-03" in queries[-1]
+
+
+class _FixedDate(__import__("datetime").date):
+    @classmethod
+    def today(cls):
+        return cls(2026, 11, 17)
+
+
+EMPTY_SRU = (
+    '<searchRetrieveResponse xmlns="http://docs.oasis-open.org/ns/search-ws/sruResponse">'
+    "<numberOfRecords>0</numberOfRecords><records/></searchRetrieveResponse>"
+)

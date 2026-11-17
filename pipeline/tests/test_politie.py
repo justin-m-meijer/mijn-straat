@@ -94,7 +94,9 @@ def _politie_handler(request: httpx.Request) -> httpx.Response:
         if path.endswith("/TypedDataSet"):
             assert "startswith(WijkenEnBuurten,'BU1705')" in request.url.params["$filter"]
             assert "SoortMisdrijf eq '0.0.0  '" in request.url.params["$filter"]  # sleutel mét opvulling
-            return httpx.Response(200, json={"value": _cbs_rows(politie.last_periods(24))})
+            flt = request.url.params["$filter"]
+            assert flt.count("Perioden eq ") == 1  # per maand, i.v.m. CBS-limiet van 10.000 rijen
+            return httpx.Response(200, json={"value": [r for r in _cbs_rows(politie.last_periods(24)) if f"Perioden eq '{r['Perioden']}'" in flt]})
     return None
 
 

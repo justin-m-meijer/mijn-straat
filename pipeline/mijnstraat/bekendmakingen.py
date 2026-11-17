@@ -18,13 +18,16 @@ SRU_URL = "https://repository.overheid.nl/sru"
 PAGE_SIZE = 100
 
 
-def build_query(gemeente: str, since: dt.date) -> str:
+def build_query(gemeente: str, since: dt.date, until: dt.date | None = None) -> str:
     # Gemeenteblad én Staatscourant: gemeentelijke verkeersbesluiten staan in de Staatscourant.
-    return (
+    q = (
         "c.product-area==officielepublicaties"
         f' AND dt.creator=="{gemeente}"'
         f" AND dt.available>={since.isoformat()}"
     )
+    if until is not None:
+        q += f" AND dt.available<={until.isoformat()}"
+    return q
 
 
 def parse_records(xml_text: str) -> tuple[list[Item], int | None]:
@@ -109,9 +112,40 @@ def _apply_location_metadata(data: ET.Element, item: Item) -> None:
         item.location_hint = f"{postcode} {huisnummer}".strip()
 
 
+# SRU geeft geen records voorbij startRecord 10.000; grote gemeenten (Amsterdam
+# ~1.100 per week) halen we daarom per venster van een week op.
+WINDOW_DAYS = 7
+
+
 def fetch(client: httpx.Client, gemeente: str, days: int, limit: int | None = None) -> list[Item]:
-    since = dt.date.today() - dt.timedelta(days=days)
-    query = build_query(gemeente, since)
+    today = dt.date.today()
+    since = today - dt.timedelta(days=days)
+    items: list[Item] = []
+    seen: set[str] = set()
+    end = today
+    while end >= since:
+        start_day = max(since, end - dt.timedelta(days=WINDOW_DAYS - 1))
+        remaining = limit - len(items) if limit else None
+        for item in _fetch_window(client, gemeente, start_day, end, since, remaining):
+            key = item.id or item.url
+            if key not in seen:
+                seen.add(key)
+                items.append(item)
+        if limit and len(items) >= limit:
+            return items[:limit]
+        end = start_day - dt.timedelta(days=1)
+    return items
+
+
+def _fetch_window(
+    client: httpx.Client,
+    gemeente: str,
+    window_start: dt.date,
+    window_end: dt.date,
+    since: dt.date,
+    limit: int | None,
+) -> list[Item]:
+    query = build_query(gemeente, window_start, window_end)
     items: list[Item] = []
     start = 1
     while True:
