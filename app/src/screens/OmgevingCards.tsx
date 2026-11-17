@@ -3,6 +3,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { loadLiveLucht } from '../data';
 import { distanceMeters, formatDistance } from '../geo';
+import { ADVIES, LKI_KLEUR, klasse, lkiVoorStof } from '../lki';
 import { colors } from '../theme';
 import type { Meetstation, Meting, Omgeving, Profile, Zwemplek } from '../types';
 import { T, column, inkMuted } from '../ui';
@@ -13,15 +14,6 @@ const STOFFEN: { key: string; label: string }[] = [
   { key: 'PM25', label: 'Fijnstof PM2,5' },
   { key: 'O3', label: 'Ozon' },
 ];
-
-/** Luchtkwaliteitsindex van het RIVM (1 tot en met 11) met de officiële klassen. */
-function lkiKlasse(n: number): { label: string; bg: string; fg: string } {
-  if (n <= 3) return { label: 'Goed', bg: '#DCEBEA', fg: '#2D5E5B' };
-  if (n <= 6) return { label: 'Matig', bg: '#F4ECCF', fg: '#6B5426' };
-  if (n <= 8) return { label: 'Onvoldoende', bg: '#F3E3D3', fg: '#7A4A22' };
-  if (n <= 10) return { label: 'Slecht', bg: '#F2D9D6', fg: '#8A2E24' };
-  return { label: 'Zeer slecht', bg: '#E8DAEE', fg: '#5B2C6F' };
-}
 
 function hour(iso: string): string {
   const d = new Date(iso);
@@ -49,41 +41,105 @@ function withDistance<X extends { lat: number; lon: number }>(list: X[], profile
   return list.map((x) => ({ ...x, d: distanceMeters(profile.lat, profile.lon, x.lat, x.lon) })).sort((a, b) => a.d - b.d);
 }
 
+// Labels onder de schaal, met het aantal stappen dat ze beslaan (1-3, 4-6, 7-8, 9-10, 11).
+const SCHAAL_LABELS: [string, number][] = [['goed', 3], ['matig', 3], ['onvoldoende', 2], ['slecht', 2], ['', 1]];
+
+/** De elf stappen van de index als gekleurde balk, met de huidige stap gemarkeerd. */
+function Schaal({ n, height = 8 }: { n: number; height?: number }) {
+  return (
+    <View style={{ flexDirection: 'row', gap: 2 }} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+      {LKI_KLEUR.slice(1).map((kleur, i) => (
+        <View
+          key={i}
+          style={{
+            flex: 1,
+            height: i + 1 === n ? height + 6 : height,
+            marginTop: i + 1 === n ? 0 : 3,
+            borderRadius: 3,
+            backgroundColor: kleur,
+            opacity: i + 1 <= n ? 1 : 0.35,
+            borderWidth: i + 1 === n ? 2 : 0,
+            borderColor: colors.ink,
+          }}
+        />
+      ))}
+    </View>
+  );
+}
+
+function StofTegel({ stof, label, m }: { stof: string; label: string; m: Meting }) {
+  const n = lkiVoorStof(stof, m.waarde);
+  const k = n ? klasse(n) : null;
+  return (
+    <View
+      style={[styles.tegel, k && { backgroundColor: k.bg, borderLeftColor: LKI_KLEUR[n!] }]}
+      accessibilityLabel={`${label}: ${value(m.waarde)} microgram per kubieke meter${k ? `, ${k.label}` : ''}`}
+    >
+      <T style={{ fontSize: 12, color: k?.fg ?? colors.textMuted }}>{label}</T>
+      <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 6 }}>
+        <T weight="bold" style={{ fontSize: 18, color: colors.ink }}>
+          {value(m.waarde)} <T style={{ fontSize: 11, color: inkMuted }}>µg/m³</T>
+        </T>
+        {k && (
+          <T weight="bold" style={{ fontSize: 13, color: k.fg }}>
+            {k.label}
+          </T>
+        )}
+      </View>
+      {n != null && <Schaal n={n} height={4} />}
+    </View>
+  );
+}
+
 function Station({ s, d, live }: { s: Meetstation; d: number; live: Record<string, Meting> | null | undefined }) {
   const laatste = live ?? s.laatste ?? {};
   const lki = laatste.LKI;
-  const klasse = lki ? lkiKlasse(lki.waarde) : null;
+  const k = lki ? klasse(lki.waarde) : null;
   const stoffen = STOFFEN.filter((x) => laatste[x.key]);
   const tijd = lki?.tijd ?? stoffen.map((x) => laatste[x.key].tijd).sort().pop();
   return (
-    <View style={{ gap: 8 }}>
-      <View style={styles.row}>
-        <View style={{ flex: 1 }}>
-          <T weight="semibold" style={{ fontSize: 15, color: colors.text }}>
-            {s.naam}
-          </T>
-          <T style={{ fontSize: 12, color: colors.textMuted }}>
-            {formatDistance(d)} van je adres{tijd ? ` · ${hour(tijd)}` : ''}
-            {live ? '' : live === null ? ' · niet actueel' : ''}
-          </T>
-        </View>
-        {klasse && (
-          <View style={[styles.chip, { backgroundColor: klasse.bg }]} accessibilityLabel={`Luchtkwaliteitsindex ${lki!.waarde}, ${klasse.label}`}>
-            <T weight="bold" style={{ fontSize: 13, color: klasse.fg }}>
-              {klasse.label} · {lki!.waarde}
-            </T>
-          </View>
-        )}
+    <View style={{ gap: 10 }}>
+      <View>
+        <T weight="semibold" style={{ fontSize: 15, color: colors.text }}>
+          {s.naam}
+        </T>
+        <T style={{ fontSize: 12, color: colors.textMuted }}>
+          {formatDistance(d)} van je adres{tijd ? ` · ${hour(tijd)}` : ''}
+          {live === null ? ' · niet actueel' : ''}
+        </T>
       </View>
+      {lki && k && (
+        <View
+          style={[styles.band, { backgroundColor: k.bg }]}
+          accessibilityLabel={`Luchtkwaliteit ${k.label}, index ${lki.waarde} van 11. ${ADVIES[k.label]}`}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <View style={[styles.bol, { backgroundColor: LKI_KLEUR[lki.waarde] }]}>
+              <T weight="extrabold" style={{ fontSize: 20, color: lki.waarde >= 7 ? colors.white : colors.ink }}>
+                {lki.waarde}
+              </T>
+            </View>
+            <View style={{ flex: 1 }}>
+              <T weight="extrabold" style={{ fontSize: 24, lineHeight: 28, color: k.fg }}>
+                {k.label}
+              </T>
+              <T style={{ fontSize: 13, color: k.fg }}>{ADVIES[k.label]}</T>
+            </View>
+          </View>
+          <Schaal n={lki.waarde} />
+          <View style={{ flexDirection: 'row', gap: 2 }}>
+            {SCHAAL_LABELS.map(([label, flex]) => (
+              <T key={label} numberOfLines={1} adjustsFontSizeToFit style={[styles.schaalLabel, { flex }]}>
+                {label}
+              </T>
+            ))}
+          </View>
+        </View>
+      )}
       {stoffen.length > 0 ? (
         <View style={styles.grid}>
           {stoffen.map((x) => (
-            <View key={x.key} style={styles.stat}>
-              <T style={{ fontSize: 12, color: colors.textMuted }}>{x.label}</T>
-              <T weight="bold" style={{ fontSize: 17, color: colors.ink }}>
-                {value(laatste[x.key].waarde)} <T style={{ fontSize: 12, color: inkMuted }}>µg/m³</T>
-              </T>
-            </View>
+            <StofTegel key={x.key} stof={x.key} label={x.label} m={laatste[x.key]} />
           ))}
         </View>
       ) : (
@@ -118,12 +174,13 @@ export function LuchtCard({ omgeving, profile }: { omgeving: Omgeving | null; pr
     <Card title="Luchtkwaliteit">
       {stations.map((s, i) => (
         <View key={s.nummer} style={{ gap: 12 }}>
-          {i > 0 && <View style={styles.divider} />}
+          {i > 0 && <View style={[styles.divider, { marginVertical: 4 }]} />}
           <Station s={s} d={s.d} live={live[s.nummer]} />
         </View>
       ))}
       <T style={{ fontSize: 12, color: colors.textMuted }}>
-        De index loopt van 1 (goed) tot 11 (zeer slecht). Uurwaarden zijn nog niet gevalideerd. Bron: www.luchtmeetnet.nl
+        Index van het RIVM: 1 tot 3 goed, 4 tot 6 matig, 7 en 8 onvoldoende, 9 en 10 slecht, 11 zeer slecht. Per stof de
+        gemeten uurwaarde, nog niet gevalideerd. Bron: www.luchtmeetnet.nl
       </T>
     </Card>
   );
@@ -196,5 +253,19 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   chip: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  band: { borderRadius: 14, padding: 14, gap: 10 },
+  bol: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  schaalLabel: { fontSize: 11, color: inkMuted, textAlign: 'center' },
+  tegel: {
+    backgroundColor: colors.ivory,
+    borderRadius: 12,
+    borderLeftWidth: 5,
+    borderLeftColor: colors.border,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    minWidth: '47%',
+    flexGrow: 1,
+    gap: 4,
+  },
   stat: { backgroundColor: colors.ivory, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, minWidth: '47%', flexGrow: 1, gap: 2 },
 });
